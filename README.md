@@ -364,7 +364,7 @@ Coding agents and automated contributors must also follow [AGENTS.md](AGENTS.md)
 
 ## License and relationship to Tailscale
 
-This project is licensed under the BSD 3-Clause License. Bundled wheels contain upstream Tailcat
+This project is licensed under the MIT License. Bundled wheels contain upstream Tailcat
 and its Go dependencies; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Tailcat and Tailscale are trademarks of Tailscale Inc. This project is not an official Tailscale

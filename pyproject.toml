@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Python tooling and a verified distribution for Tailscale Tailcat"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "BSD-3-Clause"
+license = "MIT"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 dependencies = [
   "cbor2>=5.7.0",
@@ -14,6 +14,7 @@ keywords = ["tailscale", "wireguard", "netcat", "derp", "networking"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",

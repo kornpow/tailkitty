@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Re-license Tailkitty from BSD-3-Clause to MIT. Bundled upstream Tailcat remains BSD-3-Clause.
+
 ## 0.1.0 - 2026-08-29
 
 - Launch under the Tailkitty distribution, import, and primary CLI name.
