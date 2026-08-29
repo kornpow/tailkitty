@@ -1,0 +1,11 @@
+.venv/
+.cache/
+.tools/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+dist/
+src/tailkitty/bin/tailcat
+src/tailkitty/bin/tailcat.exe
+src/tailkitty/bin/manifest.json

@@ -1,0 +1,60 @@
+[tools]
+python = "3.13.11"
+go = "1.26.5"
+uv = "0.12.7"
+
+[env]
+UV_CACHE_DIR = "{{config_root}}/.cache/uv"
+
+[tasks.setup]
+description = "Install Python dependencies and the interoperable Tailcat backend"
+run = [
+  "uv sync --all-groups",
+  "mise run backend",
+]
+
+[tasks.backend]
+description = "Build the upstream Tailcat data-plane helper"
+run = "uv run python -m scripts.build_binary build --output .tools/bin"
+
+[tasks.bundle]
+description = "Build a bundled executable for the host platform"
+run = "uv run python -m scripts.build_binary build --target host --output src/tailkitty/bin"
+
+[tasks.bundle-verify]
+description = "Verify the bundled executable and integrity manifest"
+run = "uv run python -m scripts.build_binary verify --output src/tailkitty/bin"
+
+[tasks.bundle-clean]
+description = "Remove generated bundled executable files"
+run = "uv run python -m scripts.build_binary clean --output src/tailkitty/bin"
+
+[tasks.wheel]
+description = "Build a platform wheel containing the host executable"
+depends = ["bundle", "bundle-verify"]
+run = "uv build --wheel"
+
+[tasks.wheels]
+description = "Build and verify all supported platform wheels"
+run = "uv run python -m scripts.build_wheels"
+
+[tasks.wheel-smoke]
+description = "Install and inspect the bundled host wheel in an isolated environment"
+run = "uv run python -m scripts.smoke_wheel"
+
+[tasks.test]
+description = "Run the Python test suite"
+run = [
+  "uv run ruff check src tests scripts hatch_build.py",
+  "uv run ruff format --check src tests scripts hatch_build.py",
+  "uv run mypy src scripts",
+  "uv run pytest",
+]
+
+[tasks.tailkitty]
+description = "Run Tailkitty"
+run = "uv run tailkitty"
+
+[tasks.tailcat]
+description = "Run Tailkitty through its Tailcat-compatible alias"
+run = "uv run tailcat"

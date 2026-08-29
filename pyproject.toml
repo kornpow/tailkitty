@@ -1,0 +1,73 @@
+[project]
+name = "tailkitty"
+version = "0.1.0"
+description = "Python tooling and a verified distribution for Tailscale Tailcat"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "BSD-3-Clause"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+dependencies = [
+  "cbor2>=5.7.0",
+  "dnspython>=2.7.0",
+]
+keywords = ["tailscale", "wireguard", "netcat", "derp", "networking"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: System :: Networking",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/kornpow/tailkitty"
+Source = "https://github.com/kornpow/tailkitty"
+Upstream = "https://github.com/tailscale/tailcat"
+
+[project.scripts]
+tailkitty = "tailkitty.cli:main"
+tailcat = "tailkitty.cli:main"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.17.0",
+  "pytest>=8.4.0",
+  "pytest-cov>=6.2.0",
+  "pyyaml>=6.0.2",
+  "ruff>=0.12.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.27.0,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tailkitty"]
+exclude = ["src/tailkitty/bin/*"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/tailkitty", "scripts", "tests", "hatch_build.py", "*.md", "LICENSE", "pyproject.toml", "uv.lock", ".mise.toml", ".python-version"]
+exclude = ["src/tailkitty/bin/tailcat", "src/tailkitty/bin/tailcat.exe", "src/tailkitty/bin/manifest.json"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["tailkitty"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+show_error_codes = true
+warn_unreachable = true
