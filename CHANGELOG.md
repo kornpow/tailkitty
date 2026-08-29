@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-08-29
 
 - Re-license Tailkitty from BSD-3-Clause to MIT. Bundled upstream Tailcat remains BSD-3-Clause.
+- Patch and smoke-test Tailcat's controlled relay so wheel CI proves a real peer handshake, not
+  merely that the bundled executable starts.
 
 ## 0.1.0 - 2026-08-29
 

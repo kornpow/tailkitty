@@ -14,26 +14,38 @@ import time
 from pathlib import Path
 from typing import cast
 
-from tailkitty.constants import GO_VERSION, TAILCAT_COMMAND, TAILCAT_MODULE, TAILCAT_VERSION
+from tailkitty.constants import GO_VERSION, TAILCAT_MODULE, TAILCAT_VERSION
 
 from .targets import TARGETS, Target, get_target, target_dict
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BUNDLE_DIR = ROOT / "src" / "tailkitty" / "bin"
+TAILCAT_PATCHES = (ROOT / "patches" / "tailcat-dev-derp.patch",)
 
 
-def run_with_retries(
-    command: list[str], *, cwd: Path, environment: dict[str, str], attempts: int = 3
-) -> None:
-    """Retry dependency downloads, which can fail transiently in release CI."""
+def download_module(
+    go: str, module: str, *, cwd: Path, environment: dict[str, str], attempts: int = 3
+) -> dict[str, object]:
+    """Download an immutable Go module with bounded transient-failure retries."""
     for attempt in range(1, attempts + 1):
         try:
-            subprocess.run(command, cwd=cwd, env=environment, check=True)
-            return
-        except subprocess.CalledProcessError:
+            completed = subprocess.run(
+                [go, "mod", "download", "-json", module],
+                cwd=cwd,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            value = json.loads(completed.stdout)
+            if not isinstance(value, dict):
+                raise TypeError("go mod download returned a non-object")
+            return cast(dict[str, object], value)
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
             if attempt == attempts:
                 raise
             time.sleep(2 ** (attempt - 1))
+    raise AssertionError("unreachable")
 
 
 def sha256(path: Path) -> str:
@@ -42,6 +54,10 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def patch_manifest() -> list[dict[str, str]]:
+    return [{"filename": patch.name, "sha256": sha256(patch)} for patch in TAILCAT_PATCHES]
 
 
 def verify_binary(path: Path, target: Target) -> None:
@@ -69,15 +85,27 @@ def build(target: Target, output_dir: Path, *, go: str = "go") -> dict[str, obje
             f"Tailcat bundles require exactly Go {GO_VERSION}; got {go_version!r}. Run `mise install`."
         )
     with tempfile.TemporaryDirectory(prefix="tailkitty-build-") as directory:
-        module_dir = Path(directory)
-        subprocess.run(
-            [go, "mod", "init", "tailkitty-build"], cwd=module_dir, env=environment, check=True
-        )
-        run_with_retries(
-            [go, "get", f"{TAILCAT_COMMAND}@{TAILCAT_VERSION}"],
-            cwd=module_dir,
+        workspace = Path(directory)
+        module_info = download_module(
+            go,
+            f"{TAILCAT_MODULE}@{TAILCAT_VERSION}",
+            cwd=workspace,
             environment=environment,
         )
+        source = Path(str(module_info["Dir"]))
+        module_dir = workspace / "tailcat"
+        shutil.copytree(source, module_dir)
+        module_dir.chmod(module_dir.stat().st_mode | stat.S_IWUSR)
+        for source_path in module_dir.rglob("*"):
+            writable = stat.S_IWUSR | (stat.S_IXUSR if source_path.is_dir() else 0)
+            source_path.chmod(source_path.stat().st_mode | writable)
+        for patch in TAILCAT_PATCHES:
+            subprocess.run(
+                ["git", "apply", "--check", str(patch)], cwd=module_dir, env=environment, check=True
+            )
+            subprocess.run(
+                ["git", "apply", str(patch)], cwd=module_dir, env=environment, check=True
+            )
         environment.update(
             {
                 "CGO_ENABLED": "0",
@@ -96,7 +124,7 @@ def build(target: Target, output_dir: Path, *, go: str = "go") -> dict[str, obje
                 "-ldflags=-s -w -buildid=",
                 "-o",
                 str(temporary_output),
-                TAILCAT_COMMAND,
+                "./cmd/tailcat",
             ],
             cwd=module_dir,
             env=environment,
@@ -118,6 +146,7 @@ def build(target: Target, output_dir: Path, *, go: str = "go") -> dict[str, obje
         "size": destination.stat().st_size,
         "tailcat_module": TAILCAT_MODULE,
         "tailcat_version": TAILCAT_VERSION,
+        "tailcat_patches": patch_manifest(),
         "go_version": go_version,
         "reproducible_flags": ["-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid="],
         "cgo_enabled": False,
@@ -147,6 +176,7 @@ def verify_bundle(directory: Path) -> dict[str, object]:
         "filename": target.executable,
         "tailcat_module": TAILCAT_MODULE,
         "tailcat_version": TAILCAT_VERSION,
+        "tailcat_patches": patch_manifest(),
     }
     for field, expected_value in expected.items():
         if manifest.get(field) != expected_value:

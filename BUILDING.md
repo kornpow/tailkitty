@@ -9,9 +9,10 @@ mise run test
 mise run wheels
 ```
 
-`mise run wheels` cross-compiles the exact Tailcat revision in `constants.py` for five targets,
-stages each executable separately, builds a correctly tagged non-pure wheel, and verifies its
-archive paths, executable format, bundle digest, and every wheel `RECORD` entry. Build inputs use
+`mise run wheels` downloads the exact Tailcat revision in `constants.py`, applies every patch in
+`patches/`, and cross-compiles it for five targets. It stages each executable separately, builds a
+correctly tagged non-pure wheel, and verifies its archive paths, executable format, bundle digest,
+patch digest, and every wheel `RECORD` entry. Build inputs use
 `CGO_ENABLED=0`, `-trimpath`, no VCS metadata, no Go build ID, baseline CPU levels, and the exact
 mise-managed Go compiler. Dependency downloads receive bounded retries for transient CI failures.
 
@@ -21,7 +22,8 @@ Build one target with:
 uv run python -m scripts.build_wheels --target linux-x86_64 --output dist/wheels
 ```
 
-Install-test the wheel matching the current host with:
+Install-test the wheel matching the current host with the integrity and real peer-handshake smoke
+test:
 
 ```console
 uv run python -m scripts.smoke_wheel path/to/tailkitty-*.whl

@@ -43,6 +43,7 @@ compatibility and fail-closed bundle discovery are core requirements.
 | `src/tailkitty/constants.py` | Package, Go, module, and upstream Tailcat pins |
 | `scripts/targets.py` | Supported build targets and wheel tags |
 | `scripts/build_binary.py` | Reproducible cross-compilation and manifest creation |
+| `patches/` | Auditable patches applied to the immutable upstream Tailcat source |
 | `scripts/build_wheels.py` | Isolated five-target wheel orchestration |
 | `scripts/verify_wheel.py` | Wheel metadata, archive, binary, and RECORD verification |
 | `hatch_build.py` | Platform-wheel build hook |
@@ -89,6 +90,7 @@ honestly rather than treating them as proof of a local regression or success.
 - `TAILKITTY_VERSION` must match `[project].version` in `pyproject.toml`.
 - `GO_VERSION` must match `[tools].go` in `.mise.toml` exactly.
 - `TAILCAT_VERSION` must remain an immutable upstream version or pseudo-version.
+- Every upstream source patch must live in `patches/` and have its digest recorded in the bundle.
 - Bundle builds must use the exact Go toolchain with `GOTOOLCHAIN=local`.
 - Keep `CGO_ENABLED=0`, `-trimpath`, `-buildvcs=false`, the empty build ID, stripped symbols, and
   baseline CPU feature levels unless a documented compatibility decision changes them.

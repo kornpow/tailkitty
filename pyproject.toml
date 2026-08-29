@@ -1,6 +1,6 @@
 [project]
 name = "tailkitty"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python tooling and a verified distribution for Tailscale Tailcat"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -50,7 +50,7 @@ packages = ["src/tailkitty"]
 exclude = ["src/tailkitty/bin/*"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/tailkitty", "scripts", "tests", "hatch_build.py", "*.md", "LICENSE", "pyproject.toml", "uv.lock", ".mise.toml", ".python-version"]
+include = ["src/tailkitty", "scripts", "tests", "patches", "hatch_build.py", "*.md", "LICENSE", "pyproject.toml", "uv.lock", ".mise.toml", ".python-version"]
 exclude = ["src/tailkitty/bin/tailcat", "src/tailkitty/bin/tailcat.exe", "src/tailkitty/bin/manifest.json"]
 
 [tool.hatch.build.targets.wheel.hooks.custom]

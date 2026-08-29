@@ -58,7 +58,7 @@ To build and install the host wheel from this checkout instead:
 mise install
 uv sync --all-groups --locked
 mise run wheel
-uv tool install --force ./dist/tailkitty-0.1.0-py3-none-<platform>.whl
+uv tool install --force ./dist/tailkitty-0.1.1-py3-none-<platform>.whl
 ```
 
 A bundled wheel does not require Go at runtime. It provides the `tailkitty` command plus `tailcat`
@@ -314,6 +314,9 @@ Current limitations:
   only.
 - Public DERP relays are rate-limited external infrastructure with no uptime guarantee. A relay
   timeout does not necessarily indicate a local packaging or token error.
+- Wheel smoke tests also run an isolated local DERP/STUN relay and require a real encrypted peer
+  handshake to complete within five seconds, so public-relay availability cannot hide a broken
+  bundled data plane.
 - Upstream Tailcat is experimental and its token and CLI interfaces can change.
 - Only the five targets above are built. Other platforms may use an explicitly supplied compatible
   backend, but are not release-tested here.

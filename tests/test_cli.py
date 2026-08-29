@@ -17,7 +17,7 @@ def test_parse_command(capsys) -> None:
 
 def test_doctor_json_is_machine_readable(capsys, monkeypatch) -> None:
     report = {
-        "tailkitty_version": "0.1.0",
+        "tailkitty_version": "0.1.1",
         "python_version": "3.13.11",
         "machine": "arm64",
         "backend": {"path": "/bundle/tailcat", "source": "bundle", "executable": True},
