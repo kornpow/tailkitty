@@ -1,5 +1,9 @@
 # Tailkitty
 
+[![PyPI](https://img.shields.io/pypi/v/tailkitty.svg)](https://pypi.org/project/tailkitty/)
+[![Python](https://img.shields.io/pypi/pyversions/tailkitty.svg)](https://pypi.org/project/tailkitty/)
+[![CI](https://github.com/kornpow/tailkitty/actions/workflows/ci.yml/badge.svg)](https://github.com/kornpow/tailkitty/actions/workflows/ci.yml)
+
 Python tooling for [Tailscale Tailcat](https://github.com/tailscale/tailcat): encrypted,
 account-free, netcat-style connections over Tailscale's data plane.
 

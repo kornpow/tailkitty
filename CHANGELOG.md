@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 - unreleased
+## 0.1.0 - 2026-08-29
 
 - Launch under the Tailkitty distribution, import, and primary CLI name.
 - Implement Tailcat token parsing, validation, resolution, DNS destination lookup, and DERP caching
