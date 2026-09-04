@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 
 from tailkitty.constants import TAILCAT_MODULE, TAILCAT_VERSION
 
+from .build_binary import patch_manifest
 from .targets import get_target
 
 
@@ -61,10 +62,13 @@ def verify_wheel(path: Path, target_name: str) -> dict[str, object]:
             "filename": target.executable,
             "tailcat_module": TAILCAT_MODULE,
             "tailcat_version": TAILCAT_VERSION,
+            "tailcat_patches": patch_manifest(),
         }
         for field, expected in expected_manifest.items():
             if manifest.get(field) != expected:
                 raise RuntimeError(f"bundle manifest {field} does not match wheel build inputs")
+        if not isinstance(manifest.get("release_tags"), str) or not manifest["release_tags"]:
+            raise RuntimeError("bundle manifest has no upstream release build tags")
         if manifest["size"] != len(binary):
             raise RuntimeError("bundle size does not match wheel executable")
         if manifest["sha256"] != hashlib.sha256(binary).hexdigest():

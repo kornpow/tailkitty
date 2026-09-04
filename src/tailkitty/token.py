@@ -130,15 +130,27 @@ class DerpRegion:
 @dataclass(slots=True)
 class ConnInfo:
     server_public: bytes
+    server_disco_public: bytes | None = None
+    preshared_key: bytes | None = None
     regions: list[DerpRegion] = field(default_factory=list)
     region_id: int = 0
 
     def __post_init__(self) -> None:
         if len(self.server_public) != 32:
             raise TokenError(f"server public key must be 32 bytes, got {len(self.server_public)}")
+        for label, value in (
+            ("server disco public key", self.server_disco_public),
+            ("pre-shared key", self.preshared_key),
+        ):
+            if value is not None and len(value) != 32:
+                raise TokenError(f"{label} must be 32 bytes, got {len(value)}")
 
     def to_token(self) -> str:
         wire: dict[str, Any] = {"p": self.server_public}
+        if self.server_disco_public is not None:
+            wire["k"] = self.server_disco_public
+        if self.preshared_key is not None:
+            wire["q"] = self.preshared_key
         if self.regions:
             wire["r"] = [region.to_wire(compact=True) for region in self.regions]
         if self.region_id:
@@ -148,6 +160,10 @@ class ConnInfo:
 
     def to_display_dict(self, *, raw: bool = True) -> dict[str, Any]:
         result: dict[str, Any] = {"ServerPublic": "nodekey:" + self.server_public.hex()}
+        if self.server_disco_public is not None:
+            result["ServerDiscoPublic"] = "discokey:" + self.server_disco_public.hex()
+        if self.preshared_key is not None:
+            result["PresharedKey"] = "psk:" + self.preshared_key.hex()
         if self.regions:
             result["Region"] = [_region_display(region, raw=raw) for region in self.regions]
         if self.region_id:
@@ -180,12 +196,24 @@ def parse_token(token: str, *, restore_implicit: bool = False) -> ConnInfo:
         raise TokenError("token CBOR must contain byte-string field 'p'")
     regions = wire.get("r", [])
     region_id = wire.get("i", 0)
+    server_disco_public = wire.get("k")
+    preshared_key = wire.get("q")
     if not isinstance(regions, list):
         raise TokenError("token CBOR field 'r' must be an array")
     if not isinstance(region_id, int) or isinstance(region_id, bool):
         raise TokenError("token CBOR field 'i' must be an integer")
+    for key, label, value in (
+        ("k", "server disco public key", server_disco_public),
+        ("q", "pre-shared key", preshared_key),
+    ):
+        if value is not None and not isinstance(value, bytes):
+            raise TokenError(f"token CBOR field '{key}' must be a byte string")
+        if value is not None and len(value) != 32:
+            raise TokenError(f"{label} must be 32 bytes, got {len(value)}")
     info = ConnInfo(
         server_public=wire["p"],
+        server_disco_public=server_disco_public,
+        preshared_key=preshared_key,
         regions=[DerpRegion.from_wire(region) for region in regions],
         region_id=region_id,
     )

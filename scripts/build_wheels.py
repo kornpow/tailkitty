@@ -10,6 +10,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from tailkitty.constants import TAILKITTY_VERSION
+
 from .build_binary import build
 from .targets import TARGETS, get_target
 from .verify_wheel import verify_wheel
@@ -44,7 +46,11 @@ def build_wheels(
                 env=environment,
                 check=True,
             )
-            wheels = sorted(output_dir.glob(f"*-py3-none-{target.wheel_platform}.whl"))
+            wheels = sorted(
+                output_dir.glob(
+                    f"tailkitty-{TAILKITTY_VERSION}-py3-none-{target.wheel_platform}.whl"
+                )
+            )
             if len(wheels) != 1:
                 raise RuntimeError(f"expected one wheel for {target.name}, found {len(wheels)}")
             results.append(verify_wheel(wheels[0], target.name))

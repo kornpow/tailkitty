@@ -9,6 +9,10 @@ module, revision, size, and SHA-256. The build hook refuses a missing, path-esca
 or checksum-mismatched executable. At runtime, Tailkitty repeats manifest, platform, size, and digest
 validation before selecting the bundle. `tailkitty doctor --json` exposes the verified provenance.
 
+Tailcat v0.6.0 addresses include a WireGuard pre-shared key and a distinct discovery public key.
+Tailkitty's Python parser and resolver preserve both fields. Treat a complete active address as
+sensitive capability material even though it contains no server private key.
+
 `TAILKITTY_BACKEND` deliberately overrides the bundled executable. Treat that setting as code
 execution authority: Tailkitty checks that the path is executable, but cannot establish the origin
 or integrity of a user-supplied backend.

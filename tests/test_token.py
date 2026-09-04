@@ -27,6 +27,8 @@ def test_parse_upstream_readme_token() -> None:
 def test_round_trip_embedded_region() -> None:
     original = ConnInfo(
         server_public=bytes(range(32)),
+        server_disco_public=bytes(reversed(range(32))),
+        preshared_key=b"p" * 32,
         regions=[
             DerpRegion(
                 region_id=10,
@@ -47,6 +49,8 @@ def test_round_trip_embedded_region() -> None:
     )
     parsed = parse_token(original.to_token(), restore_implicit=True)
     assert parsed.server_public == original.server_public
+    assert parsed.server_disco_public == original.server_disco_public
+    assert parsed.preshared_key == original.preshared_key
     assert parsed.regions[0].nodes[0].hostname == "derp.example.com"
     assert parsed.regions[0].nodes[0].name == "derp.example.com"
 
@@ -92,3 +96,33 @@ def test_resolve_uses_region_and_limits_nodes(tmp_path, monkeypatch: pytest.Monk
 def test_bad_tokens(value: str) -> None:
     with pytest.raises(TokenError):
         parse_token(value)
+
+
+def test_resolve_preserves_modern_security_fields(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    derp_map = {"Regions": {"1": {"RegionID": 1, "Nodes": [{"HostName": "derp.example.com"}]}}}
+
+    class Response(BytesIO):
+        def __init__(self, value):
+            super().__init__(value)
+            self.headers = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: Response(json.dumps(derp_map).encode())
+    )
+    original = ConnInfo(
+        server_public=b"n" * 32,
+        server_disco_public=b"d" * 32,
+        preshared_key=b"p" * 32,
+        region_id=1,
+    )
+    resolved = parse_token(resolve_token(original.to_token(), cache=DerpMapCache(tmp_path)))
+    assert resolved.server_disco_public == b"d" * 32
+    assert resolved.preshared_key == b"p" * 32

@@ -1,6 +1,6 @@
 # Building bundled wheels
 
-The environment is fully pinned by mise: Python 3.13.11, Go 1.26.5, and uv 0.12.7.
+The environment is fully pinned by mise: Python 3.13.11, Go 1.27.1, and uv 0.12.7.
 
 ```console
 mise install
@@ -13,8 +13,9 @@ mise run wheels
 `patches/`, and cross-compiles it for five targets. It stages each executable separately, builds a
 correctly tagged non-pure wheel, and verifies its archive paths, executable format, bundle digest,
 patch digest, and every wheel `RECORD` entry. Build inputs use
-`CGO_ENABLED=0`, `-trimpath`, no VCS metadata, no Go build ID, baseline CPU levels, and the exact
-mise-managed Go compiler. Dependency downloads receive bounded retries for transient CI failures.
+`CGO_ENABLED=0`, upstream's official release build tags, `-trimpath`, no VCS metadata, no Go build
+ID, baseline CPU levels, and the exact mise-managed Go compiler. Dependency downloads receive
+bounded retries for transient CI failures.
 
 Build one target with:
 

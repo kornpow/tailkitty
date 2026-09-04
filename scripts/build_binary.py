@@ -20,7 +20,7 @@ from .targets import TARGETS, Target, get_target, target_dict
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BUNDLE_DIR = ROOT / "src" / "tailkitty" / "bin"
-TAILCAT_PATCHES = (ROOT / "patches" / "tailcat-dev-derp.patch",)
+TAILCAT_PATCHES = tuple(sorted((ROOT / "patches").glob("*.patch")))
 
 
 def download_module(
@@ -106,6 +106,7 @@ def build(target: Target, output_dir: Path, *, go: str = "go") -> dict[str, obje
             subprocess.run(
                 ["git", "apply", str(patch)], cwd=module_dir, env=environment, check=True
             )
+        release_tags = (module_dir / "build-tags.txt").read_text().strip()
         environment.update(
             {
                 "CGO_ENABLED": "0",
@@ -119,6 +120,7 @@ def build(target: Target, output_dir: Path, *, go: str = "go") -> dict[str, obje
             [
                 go,
                 "build",
+                f"-tags={release_tags}",
                 "-trimpath",
                 "-buildvcs=false",
                 "-ldflags=-s -w -buildid=",
@@ -149,6 +151,7 @@ def build(target: Target, output_dir: Path, *, go: str = "go") -> dict[str, obje
         "tailcat_patches": patch_manifest(),
         "go_version": go_version,
         "reproducible_flags": ["-trimpath", "-buildvcs=false", "-ldflags=-s -w -buildid="],
+        "release_tags": release_tags,
         "cgo_enabled": False,
     }
     manifest_path = output_dir / "manifest.json"
@@ -183,6 +186,8 @@ def verify_bundle(directory: Path) -> dict[str, object]:
             raise RuntimeError(
                 f"bundle manifest {field} is {manifest.get(field)!r}, expected {expected_value!r}"
             )
+    if not isinstance(manifest.get("release_tags"), str) or not manifest["release_tags"]:
+        raise RuntimeError("bundle manifest has no upstream release build tags")
     if binary.stat().st_size != manifest.get("size"):
         raise RuntimeError("bundled executable size does not match manifest")
     if sha256(binary) != manifest.get("sha256"):

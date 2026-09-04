@@ -25,7 +25,7 @@ def make_bundle(tmp_path, data: bytes = b"\x7fELF" + b"x" * 32):
         "size": len(data),
         "tailcat_module": TAILCAT_MODULE,
         "tailcat_version": TAILCAT_VERSION,
-        "go_version": "go version go1.26.5 linux/amd64",
+        "go_version": "go version go1.27.1 linux/amd64",
     }
     (tmp_path / "manifest.json").write_text(json.dumps(manifest))
     clear_bundle_cache()

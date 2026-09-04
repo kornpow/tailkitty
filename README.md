@@ -20,7 +20,8 @@ Tailcat executable whose platform, version, size, and SHA-256 digest are checked
 - Inspect, validate, and resolve Tailcat tokens without starting a native process.
 - Use typed synchronous and asyncio clients instead of assembling subprocess commands.
 - Manage server startup, readiness, timeouts, and cleanup safely from Python.
-- Keep upstream CLI compatibility for streaming, forwarding, ping, SOCKS, SSH, and key commands.
+- Keep upstream CLI compatibility for streaming, forwarding, files, UDP, ping, SOCKS, SSH, and key
+  commands.
 - Install a self-contained platform wheel with runtime bundle-integrity checks.
 - Reproduce releases with pinned Python, Go, uv, Tailcat, and cross-platform build inputs.
 
@@ -58,7 +59,7 @@ To build and install the host wheel from this checkout instead:
 mise install
 uv sync --all-groups --locked
 mise run wheel
-uv tool install --force ./dist/tailkitty-0.1.1-py3-none-<platform>.whl
+uv tool install --force ./dist/tailkitty-0.2.0-py3-none-<platform>.whl
 ```
 
 A bundled wheel does not require Go at runtime. It provides the `tailkitty` command plus `tailcat`
@@ -74,7 +75,7 @@ mise run setup
 uv run tailkitty doctor
 ```
 
-This installs Python 3.13.11, Go 1.26.5, and uv 0.12.7; synchronizes the uv environment; and
+This installs Python 3.13.11, Go 1.27.1, and uv 0.12.7; synchronizes the uv environment; and
 builds the pinned development backend at `.tools/bin/tailcat`.
 
 ### Use only the Python functionality
@@ -101,8 +102,8 @@ Copy the complete `tc...` address to the sending machine:
 printf 'hello from tailcat\n' | tailkitty --key=new 'tc...'
 ```
 
-The message appears on the receiving terminal. The server accepts one connection and exits.
-Tailcat is full-duplex; remove `< /dev/null` if you also want to type a response on the server.
+The message appears on the receiving terminal. This default pipe mode accepts one finite stream and
+exits. Use `serve`, `forward`, or a Python `Client` connection for long-lived bidirectional traffic.
 
 The PowerShell equivalents are:
 
@@ -130,11 +131,15 @@ tailkitty doctor --json             # machine-readable diagnostics
 Every other argument sequence is passed unchanged to the upstream-compatible data plane:
 
 ```console
-tailkitty --serve=8080,8443
+tailkitty serve 8080,8443
 tailkitty 'tc...' 8080
 tailkitty ping 'tc...'
 tailkitty ssh 'tc...'
 tailkitty socks 'tc...' curl http://server.tailcat:8080/
+tailkitty forward 'tc...' 18080:8080
+tailkitty serve --files=/srv/share:rw files
+tailkitty cp ./report.pdf 'tc...':
+tailkitty serve --ssh-authorized-keys=alice@github ssh
 tailkitty genkey --client
 ```
 
@@ -281,7 +286,8 @@ cache writes, and stale-cache fallback when a refresh fails.
 - Tailcat traffic uses upstream's encrypted Tailscale data plane, but authorization is a separate
   choice: omitting `--allow` allows every client that can reach the server.
 - A connection token contains routing information and a server public key, not the server's private
-  key. Nevertheless, avoid publishing an active unrestricted server address.
+  key. Current addresses also contain a separate discovery public key and a WireGuard pre-shared
+  key. Treat the complete address as sensitive capability material and avoid publishing it.
 - Use `tailkitty genkey --client`, then pass its public key through `--allow` or `allow=[...]` for
   restricted access. Passing an empty Python list denies every client.
 - `TAILKITTY_BACKEND` is an explicit code-execution override. Tailkitty verifies that it is
@@ -307,6 +313,7 @@ Read [SECURITY.md](SECURITY.md) for the bundle trust model and reporting guidanc
 
 Python 3.11 and newer is supported. Wheels use the `py3-none-<platform>` tag because the Python
 modules are not tied to a CPython ABI; the embedded executable is still platform-specific.
+The bundled data plane is Tailcat v0.6.0.
 
 Current limitations:
 

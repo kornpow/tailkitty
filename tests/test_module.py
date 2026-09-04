@@ -11,4 +11,4 @@ def test_module_entrypoint() -> None:
         text=True,
         check=True,
     )
-    assert result.stdout.strip() == "tailkitty 0.1.1"
+    assert result.stdout.strip() == "tailkitty 0.2.0"
