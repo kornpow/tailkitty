@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .constants import TAILKITTY_VERSION
+
 DEFAULT_DERP_MAP_URL = "https://tailcat.dev/derpmap.json"
 DEFAULT_MAX_AGE = 60 * 60
 MAX_DERP_MAP_BYTES = 5 * 1024 * 1024
@@ -59,7 +61,7 @@ class DerpMapCache:
         if entry is not None and now - entry.stored_at < self.max_age:
             return _decode_map(entry.data)
 
-        headers = {"Accept": "application/json", "User-Agent": "tailkitty/0.1"}
+        headers = {"Accept": "application/json", "User-Agent": f"tailkitty/{TAILKITTY_VERSION}"}
         if entry is not None and entry.etag:
             headers["If-None-Match"] = entry.etag
         request = urllib.request.Request(url, headers=headers)

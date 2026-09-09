@@ -4,90 +4,84 @@
 [![Python](https://img.shields.io/pypi/pyversions/tailkitty.svg)](https://pypi.org/project/tailkitty/)
 [![CI](https://github.com/kornpow/tailkitty/actions/workflows/ci.yml/badge.svg)](https://github.com/kornpow/tailkitty/actions/workflows/ci.yml)
 
-Python tooling for [Tailscale Tailcat](https://github.com/tailscale/tailcat): encrypted,
-account-free, netcat-style connections over Tailscale's data plane.
+Python tooling and verified platform wheels for
+[Tailscale Tailcat](https://github.com/tailscale/tailcat): encrypted, account-free connections over
+Tailscale's data plane.
 
-Tailkitty implements connection tokens, DNS destination lookup, and DERP-map resolution in
-Python. For interoperable network transport, its platform wheels contain a pinned upstream
-Tailcat executable whose platform, version, size, and SHA-256 digest are checked before execution.
+Tailkitty gives Python users two things:
+
+- Pure-Python tools for Tailcat addresses, DNS destinations, and DERP-map resolution.
+- A pinned Tailcat v0.6.0 executable for the interoperable WireGuard, DERP, NAT-traversal, and
+  userspace-networking data plane.
+
+The executable in each platform wheel is checked for its target, version, size, and SHA-256 digest
+before Tailkitty runs it. You do not need Go, root access, a Tailscale account, or a Tailscale
+control server.
 
 > [!WARNING]
-> Both upstream Tailcat and Tailkitty are experimental. Do not depend on stable token, CLI, or API
-> compatibility before a stable release.
+> Tailcat and Tailkitty are experimental. Their address, CLI, and Python APIs may change before a
+> stable release.
 
-## Why use it?
+## Start here
 
-- Inspect, validate, and resolve Tailcat tokens without starting a native process.
-- Use typed synchronous and asyncio clients instead of assembling subprocess commands.
-- Manage server startup, readiness, timeouts, and cleanup safely from Python.
-- Keep upstream CLI compatibility for streaming, forwarding, files, UDP, ping, SOCKS, SSH, and key
-  commands.
-- Install a self-contained platform wheel with runtime bundle-integrity checks.
-- Reproduce releases with pinned Python, Go, uv, Tailcat, and cross-platform build inputs.
-
-## Contents
-
-- [Install](#install)
-- [Quickstart](#quickstart)
-- [CLI](#cli)
-- [Python API](#python-api)
-- [How it works](#how-it-works)
-- [Security](#security)
-- [Compatibility and limitations](#compatibility-and-limitations)
-- [Development](#development)
+| Goal | Start with |
+| --- | --- |
+| Send bytes between two computers | [One-shot pipe](#one-shot-pipe) |
+| Reach a remote web app or database | [Forward a port](#forward-a-port) |
+| Use Tailcat from Python | [Python quickstart](#python-quickstart) |
+| Transfer files or use SSH | [Recipes](https://github.com/kornpow/tailkitty/blob/main/docs/recipes.md) |
+| Diagnose an installation | [Troubleshooting](https://github.com/kornpow/tailkitty/blob/main/docs/troubleshooting.md) |
+| Understand the trust boundary | [Security](https://github.com/kornpow/tailkitty/blob/main/SECURITY.md) |
+| Develop or package Tailkitty | [Contributing](https://github.com/kornpow/tailkitty/blob/main/CONTRIBUTING.md) |
 
 ## Install
 
-### Install a bundled wheel
-
-For the command-line tool:
+Install the command-line application with uv:
 
 ```console
 uv tool install tailkitty
 tailkitty doctor
 ```
 
-For library use inside a project:
+Add the typed Python library to a project with:
 
 ```console
 uv add tailkitty
 ```
 
-To build and install the host wheel from this checkout instead:
+`pip install tailkitty` also works. A supported platform receives a self-contained wheel with both
+the `tailkitty` command and a `tailcat` compatibility alias. Confirm what will run with:
 
 ```console
-mise install
-uv sync --all-groups --locked
-mise run wheel
-uv tool install --force ./dist/tailkitty-0.2.1-py3-none-<platform>.whl
+tailkitty --version
+tailkitty doctor
+tailkitty version
 ```
 
-A bundled wheel does not require Go at runtime. It provides the `tailkitty` command plus `tailcat`
-as an upstream-compatible alias. See the [platform matrix](#supported-platform-wheels) for tags.
+These report the Tailkitty version, verified backend provenance, and upstream Tailcat version,
+respectively.
 
-### Work from this checkout
+### Supported wheels
 
-Install [mise](https://mise.jdx.dev/), then run:
+| Operating system | Architecture | Wheel platform tag |
+| --- | --- | --- |
+| macOS 12+ | Apple Silicon | `macosx_12_0_arm64` |
+| macOS 12+ | Intel x86-64 | `macosx_12_0_x86_64` |
+| Linux, glibc 2.17+ | x86-64 | `manylinux_2_17_x86_64` |
+| Linux, glibc 2.17+ | ARM64 | `manylinux_2_17_aarch64` |
+| Windows | x86-64 | `win_amd64` |
+| Windows | ARM64 | `win_arm64` |
 
-```console
-mise install
-mise run setup
-uv run tailkitty doctor
-```
-
-This installs Python 3.13.11, Go 1.27.1, and uv 0.12.7; synchronizes the uv environment; and
-builds the pinned development backend at `.tools/bin/tailcat`.
-
-### Use only the Python functionality
-
-Token parsing, token resolution, DERP caching, and DNS destination lookup are pure Python. They can
-be used from a binary-free source installation. Network commands and `Client`/`ServerProcess`
-still require either a bundled wheel or an executable selected by `TAILKITTY_BACKEND`.
+Python 3.11 and newer is supported. The Python code is ABI-independent, but the bundled executable
+is platform-specific. Unsupported systems can use the pure-Python control-plane features or set
+`TAILKITTY_BACKEND` to a compatible Tailcat executable.
 
 ## Quickstart
 
-The following example creates an ephemeral, one-shot byte stream between two machines. Both need
-the `tailkitty` command from a bundled wheel or configured backend.
+Both machines need Tailkitty installed. A `tc...` address is case-sensitive; copy it exactly and
+quote it in shell commands.
+
+### One-shot pipe
 
 On the receiving machine:
 
@@ -96,316 +90,258 @@ tailkitty --key=new < /dev/null
 # 🐈 Server listening with new address: tc...
 ```
 
-Copy the complete `tc...` address to the sending machine:
+On the sending machine, paste the complete address:
 
 ```console
-printf 'hello from tailcat\n' | tailkitty --key=new 'tc...'
+printf 'hello from Tailkitty\n' | tailkitty --key=new 'tc...'
 ```
 
-The message appears on the receiving terminal. This default pipe mode accepts one finite stream and
-exits. Use `serve`, `forward`, or a Python `Client` connection for long-lived bidirectional traffic.
+The receiver prints the message and both processes exit. This mode carries one finite byte stream;
+use port serving or `Client.connect()` for a long-lived connection.
 
-The PowerShell equivalents are:
+PowerShell equivalents:
 
 ```powershell
 $null | tailkitty --key=new
-'hello from tailcat' | tailkitty --key=new 'tc...'
+'hello from Tailkitty' | tailkitty --key=new 'tc...'
 ```
+
+### Forward a port
+
+Suppose a web application is listening on port 8080 of the server. Start Tailkitty there:
+
+```console
+tailkitty serve 8080
+# 🐈 Server listening with new address: tc...
+```
+
+On the client, expose it on local port 18080:
+
+```console
+tailkitty forward 'tc...' 18080:8080
+```
+
+Open `http://127.0.0.1:18080/`. The forwarder binds to localhost by default and runs until you
+press Ctrl-C.
 
 > [!IMPORTANT]
-> A server allows any client by default. For controlled access, generate a client key with
-> `tailkitty genkey --client` and start the server with `--allow=<client-public-key>`. See
-> [Security](#security) before exposing a service.
+> Anyone who has an unrestricted server address can connect. Use client keys and `--allow` for
+> controlled access; do not treat WireGuard encryption as authorization. See
+> [Protect a server](https://github.com/kornpow/tailkitty/blob/main/docs/recipes.md#protect-a-server-with-client-keys).
 
-## CLI
+### Python quickstart
 
-Three commands are implemented natively in Python:
-
-```console
-tailkitty parse 'tc...'             # decode and validate a token as JSON
-tailkitty resolve 'tc...'           # embed the referenced DERP region
-tailkitty doctor                    # show the selected backend and provenance
-tailkitty doctor --json             # machine-readable diagnostics
-```
-
-Every other argument sequence is passed unchanged to the upstream-compatible data plane:
-
-```console
-tailkitty serve 8080,8443
-tailkitty 'tc...' 8080
-tailkitty ping 'tc...'
-tailkitty ssh 'tc...'
-tailkitty socks 'tc...' curl http://server.tailcat:8080/
-tailkitty forward 'tc...' 18080:8080
-tailkitty serve --files=/srv/share:rw files
-tailkitty cp ./report.pdf 'tc...':
-tailkitty serve --ssh-authorized-keys=alice@github ssh
-tailkitty genkey --client
-```
-
-Run `tailkitty --help` for the Python command summary. Upstream commands retain their own help, for
-example `tailkitty genkey --help`.
-
-Destinations may be literal connection tokens or DNS names with a TXT record of the form:
-
-```dns
-server.example.com. 300 IN TXT "tailcat=tc..."
-```
-
-DNS records are public, so publishing an address removes its normal secrecy. A DNS-named server
-must authenticate clients independently with `--allow`, SSH authorized keys, or both. Never put an
-unrestricted service—especially `no-auth-ssh`—behind a public `tailcat=` record.
-
-## Python API
-
-### Inspect tokens without the native backend
+On the server:
 
 ```python
-from tailkitty import parse_token, resolve_token
+import time
 
-info = parse_token("tc...")
-print(info.server_public.hex())
-print(info.region_id)
+from tailkitty import ServerProcess
 
-# Fetch and embed the referenced DERP region. Cached maps are revalidated with ETags.
-self_contained_token = resolve_token("tc...")
+# This allows anyone with the secret address to connect. See the security note below.
+with ServerProcess(serve=8080, key="new", allow=None) as server:
+    print(server.token, flush=True)
+    while True:
+        time.sleep(60)
 ```
 
-Malformed tokens raise `TokenError`. DNS lookup raises `DestinationError`, and DERP-map failures
-raise `DerpMapError` or are translated to `TokenError` by `resolve_token()`.
-Unknown CBOR fields are retained in the `extensions` mapping on `ConnInfo`, `DerpRegion`, and
-`DerpNode`, then preserved by `to_token()`; this prevents Python resolution from silently stripping
-fields introduced by a newer Tailcat.
-
-### Send a finite request
+On the client, after receiving the complete address:
 
 ```python
-import subprocess
-
 from tailkitty import Client
 
-client = Client("tc...")  # A DNS name with a tailcat= TXT record also works.
-
-# request() checks the exit status and returns stdout bytes.
-response = client.request(b"GET / HTTP/1.0\r\n\r\n", port=8080, timeout=30)
-
-# run() preserves status, stdout, and stderr; checking is opt-in.
-result = client.run(b"hello", timeout=30, check=False)
-if result.returncode:
-    raise subprocess.CalledProcessError(
-        result.returncode, result.args, result.stdout, result.stderr
-    )
+response = Client("tc...").request(
+    b"GET / HTTP/1.0\r\nHost: localhost\r\n\r\n",
+    port=8080,
+    timeout=30,
+)
+print(response.decode(errors="replace"))
 ```
 
-Use `Client.connect()` when a long-lived, full-duplex `subprocess.Popen` stream is needed. DNS
-results are cached on each client; call `client.refresh()` to resolve the destination again.
+The context manager waits for a validated address, then terminates and reaps the native process on
+exit. See the [Python API guide](https://github.com/kornpow/tailkitty/blob/main/docs/python-api.md)
+for asyncio, streaming, token handling, server
+options, exceptions, and low-level execution.
 
-### Manage a server
+## CLI model
 
-```python
-from tailkitty import ServerProcess
+Tailkitty owns a small Python-native command surface:
 
-with ServerProcess(serve=[8080, 8443], key="new", allow=["nodekey:..."]) as server:
-    print(f"share this address with the allowed client: {server.token}")
-    print(f"native process id: {server.process.pid}")
-    # The context remains active while the remote client uses the forwarded ports.
+```console
+tailkitty parse 'tc...'            # validate and decode an address as JSON
+tailkitty resolve 'tc...'          # embed the referenced DERP relay details
+tailkitty doctor                   # inspect backend selection and provenance
+tailkitty doctor --json            # machine-readable diagnostics
+tailkitty --version                # Tailkitty package version
 ```
 
-`ServerProcess.start()` waits up to 20 seconds by default for a validated connection token. The
-context manager terminates the server and escalates to a kill if it does not stop within its grace
-period. `allow=[]` means `--allow=none`; `allow=None` preserves upstream's allow-all default.
+Everything else passes unchanged to the pinned Tailcat executable:
 
-Serve a directory and authenticated SSH without assembling command-line flags:
-
-```python
-from pathlib import Path
-
-from tailkitty import ServerProcess
-
-with ServerProcess(
-    serve=["files", "ssh"],
-    files=Path("/srv/share"),
-    ssh_authorized_keys=["alice@github", "/etc/ssh/authorized_keys"],
-    allow=["nodekey:..."],
-    use_preshared_key=True,
-) as server:
-    print(server.token)
+```console
+tailkitty serve --help
+tailkitty ping --until-direct 'tc...'
+tailkitty forward 'tc...' 18080:8080
+tailkitty recv ~/inbox
+tailkitty cp report.pdf 'tc...':
+tailkitty serve --ssh-authorized-keys=alice@github ssh
+tailkitty ssh 'tc...'
+tailkitty socks 'tc...' curl http://server.tailcat:8080/
+tailkitty genkey --client --key=client-default
 ```
 
-`derp_map_url`, `use_preshared_key`, `files`, and `ssh_authorized_keys` are available on both
-`ServerProcess` and `AsyncServerProcess`. `extra_args` remains available for new upstream options
-that Tailkitty does not yet model.
+Run `tailkitty readme` for the documentation embedded in the bundled Tailcat version. Tailcat v0.6
+also supports application-layer UDP through its Go API and SOCKS5 UDP association; Tailkitty does
+not currently expose a separate typed Python UDP API.
 
-### Use asyncio
+## Addresses and DNS
 
-```python
-import asyncio
+A Tailcat address starts with `tc` and contains a CBOR document encoded as unpadded base64url. A
+current address can contain:
 
-from tailkitty import AsyncClient, AsyncServerProcess
+- The server's WireGuard public key.
+- A separate discovery public key.
+- A WireGuard pre-shared key.
+- Either a DERP region ID or embedded relay details.
 
+Tailkitty parses and validates those fields in Python. Unknown future CBOR fields are retained in
+the `extensions` mappings on `ConnInfo`, `DerpRegion`, and `DerpNode`, preventing resolution from
+silently stripping new upstream fields.
 
-async def main() -> None:
-    response = await AsyncClient("tc...").request(b"hello", timeout=30)
-    print(response)
+Tailcat commands and `Client` also accept a DNS name with a TXT record like:
 
-    async with AsyncServerProcess(serve=8080, key="new", allow=[]) as server:
-        print(server.token)  # Starts successfully, but rejects all clients.
-
-
-asyncio.run(main())
+```dns
+service.example.com. 300 IN TXT "tailcat=tc..."
 ```
 
-Cancellation and timeout paths kill and reap their native child process before propagating the
-exception.
+> [!CAUTION]
+> DNS is public. Publishing an address removes its normal secrecy. A DNS-named server must
+> authenticate clients independently with `--allow`, SSH authorized keys, or both. Never publish
+> an unrestricted service, especially `no-auth-ssh`.
 
-### API behavior at a glance
+Short addresses refer to a DERP region by ID. `tailkitty resolve` expands one into a self-contained
+address using a bounded, validated DERP-map cache:
 
-| API | Backend needed? | Result |
+```console
+tailkitty parse 'tc...'
+tailkitty resolve 'tc...' > full-address.txt
+```
+
+## Python API overview
+
+| API | Native backend? | Purpose |
 | --- | --- | --- |
-| `parse_token(token)` | No | Typed `ConnInfo` |
-| `resolve_token(token)` | No | Self-contained token string |
-| `resolve_destination(name)` | No | Validated token string |
-| `Client.request(data, ...)` | Yes | Response `bytes`; raises on non-zero exit |
-| `Client.run(data, ...)` | Yes | `subprocess.CompletedProcess[bytes]` |
-| `Client.connect(...)` | Yes | Streaming `subprocess.Popen[bytes]` |
-| `ServerProcess(...)` | Yes | Managed synchronous server |
+| `parse_token(token)` | No | Decode and validate an address into `ConnInfo` |
+| `resolve_token(token)` | No | Embed DERP relay details in a short address |
+| `resolve_destination(value)` | No | Resolve a literal address or DNS TXT destination |
+| `DerpMapCache` | No | Bounded HTTP cache with ETag and stale fallback |
+| `Client.request(...)` | Yes | Finite request/response exchange |
+| `Client.run(...)` | Yes | Finite exchange with exit status and stderr |
+| `Client.connect(...)` | Yes | Full-duplex `subprocess.Popen` connection |
+| `ServerProcess` | Yes | Managed synchronous server |
 | `AsyncClient` / `AsyncServerProcess` | Yes | Asyncio equivalents |
-| `run(arguments, ...)` / `run_async(arguments, ...)` | Yes | Low-level upstream command execution |
+| `run(...)` / `run_async(...)` | Yes | Low-level Tailcat command execution |
+| `diagnostics()` | Yes | Structured backend and environment report |
 
-The package is marked with `py.typed` and is checked with strict mypy.
+The distribution includes `py.typed` and is checked with strict mypy. Public exceptions and full
+examples are documented in the [Python API guide](https://github.com/kornpow/tailkitty/blob/main/docs/python-api.md).
+
+## Security summary
+
+- Addresses are capability material. Current addresses include a pre-shared key; do not post them
+  in logs, screenshots, issues, or public DNS unless another authorization layer is active.
+- A server allows every client by default. Generate a client identity with `tailkitty genkey
+  --client --key=client-default`, then supply its printed public key with `--allow`.
+- `allow=None` in Python preserves the upstream allow-all default. `allow=[]` becomes
+  `--allow=none` and denies every client.
+- `TAILKITTY_BACKEND` is explicit code-execution authority. Tailkitty checks that the path is
+  executable but cannot prove the provenance of a user-selected binary.
+- Bundled executables fail closed: a present but invalid bundle raises an integrity error instead
+  of falling back to an unverified executable.
+
+Read the [security policy](https://github.com/kornpow/tailkitty/blob/main/SECURITY.md) before
+exposing SSH, files, an exit node, or a DNS-named service.
 
 ## How it works
 
-Tailcat's connection-token format is CBOR encoded as unpadded base64url after a `tc` prefix. That
-wire format and the lightweight control-plane operations are implemented in Python. The encrypted
-transport remains upstream because it depends on Tailscale's Go implementations of magicsock,
-userspace WireGuard, DERP routing, and gVisor netstack.
-
 ```text
-Python caller / CLI
+Python caller or tailkitty CLI
         |
-        +-- token.py -------- CBOR token codec (pure Python)
-        +-- destination.py -- token or DNS TXT resolution (pure Python)
-        +-- derp.py --------- DERP-map cache and HTTP revalidation (pure Python)
-        +-- client.py ------- typed sync/async client facade
+        +-- token.py -------- address codec and validation (pure Python)
+        +-- destination.py -- literal or DNS TXT lookup (pure Python)
+        +-- derp.py --------- validated DERP-map cache (pure Python)
+        +-- client.py ------- sync and asyncio client facade
         +-- process.py ------ managed server and subprocess lifecycle
         |
-        +-- backend.py ------ backend discovery and command execution
+        +-- backend.py ------ deterministic backend discovery
                 |
-                +-- verified wheel bundle, development build, or explicit executable
+                +-- verified wheel bundle
+                +-- development build
+                +-- explicitly configured upstream executable
 ```
 
-Backend discovery is deterministic and fail-closed:
+The encrypted data plane stays upstream because it depends on Tailscale's Go implementations of
+magicsock, userspace WireGuard, DERP, and gVisor netstack. Reimplementing only part of that stack in
+Python would lose interoperability and security properties. See
+[architecture guide](https://github.com/kornpow/tailkitty/blob/main/docs/architecture.md) for the
+detailed boundary and data flows.
 
-1. Executable named by `TAILKITTY_BACKEND`; an invalid path is an error.
-2. Platform-compatible bundled executable with a valid integrity manifest.
-3. Development executable at `.tools/bin/tailcat` (then the legacy `tailcat-go` filename).
-4. A `tailcat-go` executable on `PATH`.
+## Backend selection
 
-If a bundled executable is present but fails validation, Tailkitty reports an integrity error
-instead of silently selecting another backend. `tailkitty doctor --json` shows the selected source,
-target, upstream revision, compiler, size, and digest.
+Tailkitty selects exactly one backend in this order:
 
-DERP maps use a one-hour disk cache by default, ETag revalidation, a 5 MiB response limit, atomic
-cache writes, and stale-cache fallback when a refresh fails.
+1. `TAILKITTY_BACKEND`, if explicitly set; an invalid path fails immediately.
+2. The verified, runtime-compatible executable bundled in the installed wheel.
+3. `.tools/bin/tailcat`, then the legacy `.tools/bin/tailcat-go`, in a source checkout.
+4. `tailcat-go` on `PATH`.
 
-## Security
-
-- Tailcat traffic uses upstream's encrypted Tailscale data plane, but authorization is a separate
-  choice: omitting `--allow` allows every client that can reach the server.
-- A connection token contains routing information and a server public key, not the server's private
-  key. Current addresses also contain a separate discovery public key and a WireGuard pre-shared
-  key. Treat the complete address as sensitive capability material and avoid publishing it.
-- Use `tailkitty genkey --client`, then pass its public key through `--allow` or `allow=[...]` for
-  restricted access. Passing an empty Python list denies every client.
-- `TAILKITTY_BACKEND` is an explicit code-execution override. Tailkitty verifies that it is
-  executable but cannot prove the provenance of a user-selected file.
-- Bundled executables are checked against their manifest for schema, upstream module and revision,
-  runtime platform, filename safety, symlinks, size, and SHA-256 before use.
-- Do not include active addresses, saved private keys, or verbose networking logs in public bug
-  reports without reviewing them first.
-
-Read [SECURITY.md](SECURITY.md) for the bundle trust model and reporting guidance.
-
-## Compatibility and limitations
-
-### Supported platform wheels
-
-| Operating system | Architecture | Wheel platform tag |
-| --- | --- | --- |
-| macOS 12 or newer | arm64 | `macosx_12_0_arm64` |
-| macOS 12 or newer | x86-64 | `macosx_12_0_x86_64` |
-| Linux, glibc 2.17 or newer | x86-64 | `manylinux_2_17_x86_64` |
-| Linux, glibc 2.17 or newer | arm64 | `manylinux_2_17_aarch64` |
-| Windows | x86-64 | `win_amd64` |
-| Windows | ARM64 | `win_arm64` |
-
-Python 3.11 and newer is supported. Wheels use the `py3-none-<platform>` tag because the Python
-modules are not tied to a CPython ABI; the embedded executable is still platform-specific.
-The bundled data plane is Tailcat v0.6.0.
-
-Current limitations:
-
-- There is no pure-Python network data plane. A binary-free install supports control-plane APIs
-  only.
-- Public DERP relays are rate-limited external infrastructure with no uptime guarantee. A relay
-  timeout does not necessarily indicate a local packaging or token error.
-- Wheel smoke tests also run an isolated local DERP/STUN relay and require a real encrypted peer
-  handshake to complete within five seconds, so public-relay availability cannot hide a broken
-  bundled data plane.
-- Upstream Tailcat is experimental and its token and CLI interfaces can change.
-- Only the six targets above are built. Other platforms may use an explicitly supplied compatible
-  backend, but are not release-tested here.
-
-See [COMPARISON.md](COMPARISON.md) for a feature-by-feature comparison with the existing PyPI
-project.
+An installed `tailcat` command is not searched on `PATH` because Tailkitty itself provides that
+alias and recursive execution must be avoided. Use `TAILKITTY_BACKEND=/path/to/tailcat` for an
+external upstream binary.
 
 ## Development
 
-The normal contributor loop is:
+The repository uses mise for tool versions and uv for Python environments:
 
 ```console
 mise install
-uv sync --all-groups --locked
+mise run setup
 mise run test
 ```
 
-Useful build and verification commands:
+Useful tasks:
 
 ```console
-mise run backend          # development helper in .tools/bin
-mise run bundle           # host helper in src/tailkitty/bin
-mise run bundle-verify    # verify the host bundle manifest
-mise run wheel            # build the host platform wheel
-mise run wheels           # cross-build and verify all six wheels
-mise run upstream-check   # compare the immutable pin with the latest stable Tailcat release
-
-# Install and inspect a newly built host wheel in isolation:
-uv run python -m scripts.smoke_wheel dist/wheels/<host-wheel>.whl
-
-# Exercise the minimum supported Python version:
-uv run --isolated --python 3.11 --all-groups pytest
+mise run backend          # build the pinned development backend
+mise run bundle           # build the host bundle
+mise run bundle-verify    # verify its manifest and executable
+mise run wheel            # build the host wheel
+mise run wheels           # build and verify all six wheels
+mise run upstream-check   # compare the pin with the latest stable Tailcat release
 ```
 
-Generated executables, manifests, wheel files, and source archives are build artifacts; do not edit
-them manually. The release pin is defined in `src/tailkitty/constants.py`, and Go must match the
-version in `.mise.toml` exactly.
+Start with [CONTRIBUTING.md](https://github.com/kornpow/tailkitty/blob/main/CONTRIBUTING.md).
+Packaging and release details are in
+[BUILDING.md](https://github.com/kornpow/tailkitty/blob/main/BUILDING.md) and
+[RELEASING.md](https://github.com/kornpow/tailkitty/blob/main/RELEASING.md). Coding agents must
+also follow [AGENTS.md](https://github.com/kornpow/tailkitty/blob/main/AGENTS.md).
 
-Additional documentation:
+## Documentation
 
-- [BUILDING.md](BUILDING.md) — reproducible binary and wheel pipeline
-- [SECURITY.md](SECURITY.md) — integrity checks and trust boundaries
-- [COMPARISON.md](COMPARISON.md) — differences from the existing PyPI package
-- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — bundled upstream licensing
-- [CHANGELOG.md](CHANGELOG.md) — release history
-- [ITERATIONS.md](ITERATIONS.md) — the initial 100-pass implementation audit
-
-Coding agents and automated contributors must also follow [AGENTS.md](AGENTS.md).
+- [Recipes](https://github.com/kornpow/tailkitty/blob/main/docs/recipes.md) — pipes, ports, files, SSH, SOCKS, DNS, and key management
+- [Python API](https://github.com/kornpow/tailkitty/blob/main/docs/python-api.md) — typed sync/async usage and behavior
+- [Troubleshooting](https://github.com/kornpow/tailkitty/blob/main/docs/troubleshooting.md) — bounded diagnostics and common failures
+- [Architecture](https://github.com/kornpow/tailkitty/blob/main/docs/architecture.md) — component boundaries, data flows, and invariants
+- [Security policy](https://github.com/kornpow/tailkitty/blob/main/SECURITY.md) — threats, authorization, bundle trust, and reporting
+- [Building](https://github.com/kornpow/tailkitty/blob/main/BUILDING.md) — reproducible native and wheel builds
+- [Releasing](https://github.com/kornpow/tailkitty/blob/main/RELEASING.md) — versioning, verification, publication, and rollback constraints
+- [Comparison](https://github.com/kornpow/tailkitty/blob/main/COMPARISON.md) — Tailkitty versus the separate `pytailcat` package
+- [Changelog](https://github.com/kornpow/tailkitty/blob/main/CHANGELOG.md) — user-visible release history
 
 ## License and relationship to Tailscale
 
-This project is licensed under the MIT License. Bundled wheels contain upstream Tailcat
-and its Go dependencies; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Tailkitty is licensed under the MIT License. Bundled wheels contain upstream Tailcat under its BSD
+3-Clause License and other Go dependencies; see
+[THIRD_PARTY_NOTICES.md](https://github.com/kornpow/tailkitty/blob/main/THIRD_PARTY_NOTICES.md).
 
-Tailcat and Tailscale are trademarks of Tailscale Inc. This project is not an official Tailscale
+Tailcat and Tailscale are trademarks of Tailscale Inc. Tailkitty is not an official Tailscale
 product.

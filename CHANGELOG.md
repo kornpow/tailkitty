@@ -1,11 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 - 2026-09-08
 
 - Use Tailcat's declarative `serve` subcommand in managed Python server processes.
 - Add typed sync/async server options for DERP-map selection, PSK policy, file roots, and SSH
   authorized-key sources.
 - Add a verified Windows ARM64 platform wheel target.
+- Replace the monolithic README with task-oriented recipes, API, troubleshooting, architecture,
+  contributor, build, security, and release documentation.
+- Export `BackendNotFound` and `ServerStartError` from the public package and report the current
+  version in DERP-map requests.
 
 ## 0.2.1 - 2026-09-08
 

@@ -12,6 +12,14 @@ Read these files before making architectural, packaging, security, or release ch
 3. `BUILDING.md` for the reproducible bundle and wheel pipeline.
 4. `pyproject.toml` and `.mise.toml` for supported versions and canonical tasks.
 
+For a focused task, then read the matching guide:
+
+- `docs/python-api.md` for public Python behavior.
+- `docs/recipes.md` for user-facing command examples.
+- `docs/troubleshooting.md` for failure and diagnostic guidance.
+- `docs/architecture.md` for ownership and data flows.
+- `RELEASING.md` before changing versions, tags, workflows, or publication.
+
 Do not confuse Tailkitty with the separate `pytailcat` distribution on PyPI. This checkout is the
 source of truth for Tailkitty; upstream Tailcat remains the data-plane source of truth.
 
@@ -49,6 +57,9 @@ compatibility and fail-closed bundle discovery are core requirements.
 | `scripts/check_upstream.py` | Latest stable Tailcat release drift check |
 | `hatch_build.py` | Platform-wheel build hook |
 | `tests/` | Unit and subprocess behavior tests |
+| `docs/` | Task-oriented user, API, troubleshooting, and architecture guides |
+| `CONTRIBUTING.md` | Human contributor workflow and checklist |
+| `RELEASING.md` | Release metadata, artifact, publishing, and verification checklist |
 
 Public imports are curated in `src/tailkitty/__init__.py`. Adding a public API requires updating
 that file, type annotations, tests, and README documentation.
@@ -66,6 +77,9 @@ mise run test
 `mise run test` is the required local quality gate. It runs Ruff linting, Ruff formatting checks,
 strict mypy, and pytest. During iteration, run the narrowest relevant test first, then run the full
 gate before declaring completion.
+
+Direct build-module commands must run through `mise exec --`; plain `uv run` can select an
+unrelated system Go version.
 
 Packaging changes also require:
 
@@ -144,6 +158,24 @@ without an explicit compatibility decision.
   keys, cache, bundle, or configured backend.
 - Keep Ruff's 100-character line length and run formatting rather than hand-aligning code.
 
+## Documentation conventions
+
+- The README is the onboarding map, not the exhaustive reference. Put task recipes, detailed API
+  behavior, troubleshooting, and architecture in their dedicated guides.
+- Documentation on `main` describes the current source tree. Cut a release promptly when the user
+  asks for GitHub, PyPI, and `main` to match.
+- State which machine runs each side of multi-peer examples.
+- Use complete copyable commands and quote `tc...` placeholders because addresses are
+  case-sensitive shell data.
+- Never put a syntactically plausible private key or active address in documentation.
+- Distinguish encryption, address possession, tunnel allow-lists, SSH keys, and application
+  authentication; do not collapse them into a generic “secure” claim.
+- Do not claim typed Python support for an upstream CLI or Go-library feature unless a Python API
+  actually exists.
+- Keep relative Markdown links resolvable from the file containing them and include new `docs/`
+  files in the source distribution.
+- When a command or flag is version-sensitive, check it against the pinned backend's `--help`.
+
 ## Generated files and release safety
 
 Do not manually edit or commit generated files under:
@@ -156,7 +188,8 @@ Do not manually edit or commit generated files under:
 Use the scripts and mise tasks that own those artifacts. Publish only the `tailkitty` distribution;
 the `pytailcat` name belongs to another project. Before a release, verify project URLs and the `pypi`
 GitHub environment, build all six wheels plus the source distribution, smoke-test the host wheel,
-and retain checksums and provenance attestations.
+and retain checksums and provenance attestations. Follow `RELEASING.md`; do not race automated and
+local publishers or upload from a directory containing artifacts from multiple versions.
 
 ## Definition of done
 

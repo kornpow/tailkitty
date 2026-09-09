@@ -1,5 +1,10 @@
 # 100-iteration improvement ledger
 
+> [!NOTE]
+> This is the historical ledger for the initial Tailkitty implementation, not current product
+> documentation. See `README.md`, `CHANGELOG.md`, and `docs/` for the current release. Version and
+> platform statements below intentionally record what was true when each iteration was completed.
+
 Each checkbox is a distinct implementation, hardening, verification, or documentation pass. Items
 are marked only after their stated evidence exists.
 
