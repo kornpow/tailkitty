@@ -7,7 +7,12 @@ mise install
 uv sync --all-groups --locked
 mise run test
 mise run wheels
+mise run upstream-check
 ```
+
+`mise run upstream-check` compares the immutable Tailcat pin with GitHub's latest stable release.
+A scheduled GitHub Actions workflow runs the same bounded check daily. Unreleased upstream `main`
+commits are reviewed separately and do not silently replace the signed release pin.
 
 `mise run wheels` downloads the exact Tailcat revision in `constants.py`, applies every patch in
 `patches/`, and cross-compiles it for five targets. It stages each executable separately, builds a

@@ -51,6 +51,10 @@ run = [
   "uv run pytest",
 ]
 
+[tasks.upstream-check]
+description = "Fail when a newer stable Tailcat release is available"
+run = "uv run python -m scripts.check_upstream"
+
 [tasks.tailkitty]
 description = "Run Tailkitty"
 run = "uv run tailkitty"

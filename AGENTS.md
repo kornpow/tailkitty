@@ -46,6 +46,7 @@ compatibility and fail-closed bundle discovery are core requirements.
 | `patches/` | Auditable patches applied to the immutable upstream Tailcat source |
 | `scripts/build_wheels.py` | Isolated five-target wheel orchestration |
 | `scripts/verify_wheel.py` | Wheel metadata, archive, binary, and RECORD verification |
+| `scripts/check_upstream.py` | Latest stable Tailcat release drift check |
 | `hatch_build.py` | Platform-wheel build hook |
 | `tests/` | Unit and subprocess behavior tests |
 

@@ -152,6 +152,10 @@ Destinations may be literal connection tokens or DNS names with a TXT record of 
 server.example.com. 300 IN TXT "tailcat=tc..."
 ```
 
+DNS records are public, so publishing an address removes its normal secrecy. A DNS-named server
+must authenticate clients independently with `--allow`, SSH authorized keys, or both. Never put an
+unrestricted service—especially `no-auth-ssh`—behind a public `tailcat=` record.
+
 ## Python API
 
 ### Inspect tokens without the native backend
@@ -169,6 +173,8 @@ self_contained_token = resolve_token("tc...")
 
 Malformed tokens raise `TokenError`. DNS lookup raises `DestinationError`, and DERP-map failures
 raise `DerpMapError` or are translated to `TokenError` by `resolve_token()`.
+Unknown top-level CBOR fields are retained in `ConnInfo.extensions` and preserved by `to_token()`;
+this prevents Python resolution from silently stripping fields introduced by a newer Tailcat.
 
 ### Send a finite request
 
@@ -349,6 +355,7 @@ mise run bundle           # host helper in src/tailkitty/bin
 mise run bundle-verify    # verify the host bundle manifest
 mise run wheel            # build the host platform wheel
 mise run wheels           # cross-build and verify all five wheels
+mise run upstream-check   # compare the immutable pin with the latest stable Tailcat release
 
 # Install and inspect a newly built host wheel in isolation:
 uv run python -m scripts.smoke_wheel dist/wheels/<host-wheel>.whl

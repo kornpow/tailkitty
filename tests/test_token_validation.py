@@ -5,7 +5,7 @@ import base64
 import cbor2
 import pytest
 
-from tailkitty import TokenError, parse_token
+from tailkitty import ConnInfo, TokenError, parse_token
 
 
 def token(value) -> str:
@@ -34,3 +34,31 @@ def test_rejects_malformed_nested_wire_values(wire, message: str) -> None:
 def test_rejects_unreasonably_large_token() -> None:
     with pytest.raises(TokenError, match="unreasonably large"):
         parse_token("tc" + "A" * 65_536)
+
+
+def test_rejects_trailing_cbor_data() -> None:
+    encoded = cbor2.dumps({"p": bytes(32)}) + b"trailing"
+    value = "tc" + base64.urlsafe_b64encode(encoded).rstrip(b"=").decode()
+    with pytest.raises(TokenError, match="trailing data"):
+        parse_token(value)
+
+
+@pytest.mark.parametrize(
+    ("wire", "message"),
+    [
+        ({"p": bytes(32), "i": 2**63}, "signed 64-bit"),
+        ({"p": bytes(32), "r": [{"i": "bad"}]}, "field 'i' must be an integer"),
+        ({"p": bytes(32), "r": [{"c": 7}]}, "field 'c' must be a text string"),
+        ({"p": bytes(32), "r": [{"N": [{"h": 7}]}]}, "field 'h' must be a text string"),
+        ({"p": bytes(32), "r": [{"N": [{"s": True}]}]}, "field 's' must be an integer"),
+        ({"p": bytes(32), "r": [{"N": [{"x": 1}]}]}, "field 'x' must be a boolean"),
+    ],
+)
+def test_rejects_wire_values_upstream_cannot_decode(wire, message: str) -> None:
+    with pytest.raises(TokenError, match=message):
+        parse_token(token(wire))
+
+
+def test_rejects_reserved_extension_keys() -> None:
+    with pytest.raises(TokenError, match="reserved"):
+        ConnInfo(server_public=bytes(32), extensions={"q": b"shadowed"})

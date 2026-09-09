@@ -126,3 +126,31 @@ def test_resolve_preserves_modern_security_fields(
     resolved = parse_token(resolve_token(original.to_token(), cache=DerpMapCache(tmp_path)))
     assert resolved.server_disco_public == b"d" * 32
     assert resolved.preshared_key == b"p" * 32
+
+
+def test_resolve_preserves_unknown_extension_fields(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    derp_map = {"Regions": {"1": {"RegionID": 1, "Nodes": [{"HostName": "derp.example.com"}]}}}
+
+    class Response(BytesIO):
+        def __init__(self, value):
+            super().__init__(value)
+            self.headers = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda request, timeout: Response(json.dumps(derp_map).encode())
+    )
+    original = ConnInfo(
+        server_public=b"n" * 32,
+        region_id=1,
+        extensions={"z": {"future-security-field": b"keep-me"}, 7: True},
+    )
+    resolved = parse_token(resolve_token(original.to_token(), cache=DerpMapCache(tmp_path)))
+    assert resolved.extensions == original.extensions

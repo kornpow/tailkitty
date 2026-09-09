@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass, field
+from io import BytesIO
 from typing import Any
 
 import cbor2
@@ -35,6 +36,13 @@ class DerpNode:
     @classmethod
     def from_wire(cls, value: dict[str, Any]) -> DerpNode:
         _require_mapping(value, "DERP node")
+        _validate_fields(
+            value,
+            strings=("n", "h", "t", "4", "6"),
+            integers=("i", "s", "d"),
+            booleans=("x",),
+            label="DERP node",
+        )
         return cls(
             name=value.get("n", ""),
             region_id=value.get("i", 0),
@@ -86,6 +94,12 @@ class DerpRegion:
     @classmethod
     def from_wire(cls, value: dict[str, Any]) -> DerpRegion:
         _require_mapping(value, "DERP region")
+        _validate_fields(
+            value,
+            strings=("c", "m"),
+            integers=("i",),
+            label="DERP region",
+        )
         nodes = value.get("N", [])
         if not isinstance(nodes, list):
             raise TokenError("DERP region field 'N' must be an array")
@@ -134,8 +148,13 @@ class ConnInfo:
     preshared_key: bytes | None = None
     regions: list[DerpRegion] = field(default_factory=list)
     region_id: int = 0
+    extensions: dict[Any, Any] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
+        reserved = self.extensions.keys() & {"p", "k", "q", "r", "i"}
+        if reserved:
+            names = ", ".join(sorted(repr(key) for key in reserved))
+            raise TokenError(f"extension fields use reserved connection-token keys: {names}")
         if len(self.server_public) != 32:
             raise TokenError(f"server public key must be 32 bytes, got {len(self.server_public)}")
         for label, value in (
@@ -146,7 +165,8 @@ class ConnInfo:
                 raise TokenError(f"{label} must be 32 bytes, got {len(value)}")
 
     def to_token(self) -> str:
-        wire: dict[str, Any] = {"p": self.server_public}
+        wire = dict(self.extensions)
+        wire["p"] = self.server_public
         if self.server_disco_public is not None:
             wire["k"] = self.server_disco_public
         if self.preshared_key is not None:
@@ -178,6 +198,17 @@ def _decode_base64url(value: str) -> bytes:
         raise TokenError(f"invalid base64url token: {exc}") from exc
 
 
+def _decode_cbor(value: bytes) -> Any:
+    stream = BytesIO(value)
+    try:
+        decoded = cbor2.CBORDecoder(stream).decode()
+    except (cbor2.CBORDecodeError, EOFError) as exc:
+        raise TokenError(f"invalid CBOR: {exc}") from exc
+    if stream.read(1):
+        raise TokenError("invalid CBOR: trailing data after connection token")
+    return decoded
+
+
 def parse_token(token: str, *, restore_implicit: bool = False) -> ConnInfo:
     """Decode a Tailcat token.
 
@@ -188,10 +219,7 @@ def parse_token(token: str, *, restore_implicit: bool = False) -> ConnInfo:
         raise TokenError('server address does not start with "tc"')
     if len(token) > 65_536:
         raise TokenError("token is unreasonably large")
-    try:
-        wire = cbor2.loads(_decode_base64url(token[2:]))
-    except cbor2.CBORDecodeError as exc:
-        raise TokenError(f"invalid CBOR: {exc}") from exc
+    wire = _decode_cbor(_decode_base64url(token[2:]))
     if not isinstance(wire, dict) or not isinstance(wire.get("p"), bytes):
         raise TokenError("token CBOR must contain byte-string field 'p'")
     regions = wire.get("r", [])
@@ -202,6 +230,7 @@ def parse_token(token: str, *, restore_implicit: bool = False) -> ConnInfo:
         raise TokenError("token CBOR field 'r' must be an array")
     if not isinstance(region_id, int) or isinstance(region_id, bool):
         raise TokenError("token CBOR field 'i' must be an integer")
+    _require_int64(region_id, "token CBOR field 'i'")
     for key, label, value in (
         ("k", "server disco public key", server_disco_public),
         ("q", "pre-shared key", preshared_key),
@@ -216,6 +245,9 @@ def parse_token(token: str, *, restore_implicit: bool = False) -> ConnInfo:
         preshared_key=preshared_key,
         regions=[DerpRegion.from_wire(region) for region in regions],
         region_id=region_id,
+        extensions={
+            key: value for key, value in wire.items() if key not in {"p", "k", "q", "r", "i"}
+        },
     )
     if restore_implicit:
         for index, region in enumerate(info.regions, start=1):
@@ -257,6 +289,33 @@ def resolve_token(
 def _require_mapping(value: Any, label: str) -> None:
     if not isinstance(value, dict):
         raise TokenError(f"{label} must be a CBOR map")
+
+
+def _require_int64(value: int, label: str) -> None:
+    if not -(2**63) <= value < 2**63:
+        raise TokenError(f"{label} must fit in a signed 64-bit integer")
+
+
+def _validate_fields(
+    value: dict[str, Any],
+    *,
+    strings: tuple[str, ...] = (),
+    integers: tuple[str, ...] = (),
+    booleans: tuple[str, ...] = (),
+    label: str,
+) -> None:
+    for key in strings:
+        if key in value and not isinstance(value[key], str):
+            raise TokenError(f"{label} field '{key}' must be a text string")
+    for key in integers:
+        if key in value:
+            item = value[key]
+            if not isinstance(item, int) or isinstance(item, bool):
+                raise TokenError(f"{label} field '{key}' must be an integer")
+            _require_int64(item, f"{label} field '{key}'")
+    for key in booleans:
+        if key in value and not isinstance(value[key], bool):
+            raise TokenError(f"{label} field '{key}' must be a boolean")
 
 
 def _region_display(region: DerpRegion, *, raw: bool) -> dict[str, Any]:

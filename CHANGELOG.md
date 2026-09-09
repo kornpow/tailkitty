@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Match upstream token rejection for trailing CBOR data, signed 64-bit overflows, and malformed
+  embedded DERP field types.
+- Preserve unknown top-level connection-token extensions across Python resolution for forward
+  compatibility.
+- Add a scheduled check that reports when a newer stable Tailcat release is available.
+
 ## 0.2.0 - 2026-09-04
 
 - Upgrade the bundled data plane from a pre-release Tailcat commit to Tailcat v0.6.0.
