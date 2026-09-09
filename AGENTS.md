@@ -44,7 +44,7 @@ compatibility and fail-closed bundle discovery are core requirements.
 | `scripts/targets.py` | Supported build targets and wheel tags |
 | `scripts/build_binary.py` | Reproducible cross-compilation and manifest creation |
 | `patches/` | Auditable patches applied to the immutable upstream Tailcat source |
-| `scripts/build_wheels.py` | Isolated five-target wheel orchestration |
+| `scripts/build_wheels.py` | Isolated six-target wheel orchestration |
 | `scripts/verify_wheel.py` | Wheel metadata, archive, binary, and RECORD verification |
 | `scripts/check_upstream.py` | Latest stable Tailcat release drift check |
 | `hatch_build.py` | Platform-wheel build hook |
@@ -155,7 +155,7 @@ Do not manually edit or commit generated files under:
 
 Use the scripts and mise tasks that own those artifacts. Publish only the `tailkitty` distribution;
 the `pytailcat` name belongs to another project. Before a release, verify project URLs and the `pypi`
-GitHub environment, build all five wheels plus the source distribution, smoke-test the host wheel,
+GitHub environment, build all six wheels plus the source distribution, smoke-test the host wheel,
 and retain checksums and provenance attestations.
 
 ## Definition of done

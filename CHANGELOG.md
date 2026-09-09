@@ -5,6 +5,7 @@
 - Use Tailcat's declarative `serve` subcommand in managed Python server processes.
 - Add typed sync/async server options for DERP-map selection, PSK policy, file roots, and SSH
   authorized-key sources.
+- Add a verified Windows ARM64 platform wheel target.
 
 ## 0.2.1 - 2026-09-08
 

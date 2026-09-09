@@ -338,6 +338,7 @@ Read [SECURITY.md](SECURITY.md) for the bundle trust model and reporting guidanc
 | Linux, glibc 2.17 or newer | x86-64 | `manylinux_2_17_x86_64` |
 | Linux, glibc 2.17 or newer | arm64 | `manylinux_2_17_aarch64` |
 | Windows | x86-64 | `win_amd64` |
+| Windows | ARM64 | `win_arm64` |
 
 Python 3.11 and newer is supported. Wheels use the `py3-none-<platform>` tag because the Python
 modules are not tied to a CPython ABI; the embedded executable is still platform-specific.
@@ -353,7 +354,7 @@ Current limitations:
   handshake to complete within five seconds, so public-relay availability cannot hide a broken
   bundled data plane.
 - Upstream Tailcat is experimental and its token and CLI interfaces can change.
-- Only the five targets above are built. Other platforms may use an explicitly supplied compatible
+- Only the six targets above are built. Other platforms may use an explicitly supplied compatible
   backend, but are not release-tested here.
 
 See [COMPARISON.md](COMPARISON.md) for a feature-by-feature comparison with the existing PyPI
@@ -376,7 +377,7 @@ mise run backend          # development helper in .tools/bin
 mise run bundle           # host helper in src/tailkitty/bin
 mise run bundle-verify    # verify the host bundle manifest
 mise run wheel            # build the host platform wheel
-mise run wheels           # cross-build and verify all five wheels
+mise run wheels           # cross-build and verify all six wheels
 mise run upstream-check   # compare the immutable pin with the latest stable Tailcat release
 
 # Install and inspect a newly built host wheel in isolation:

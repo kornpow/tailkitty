@@ -60,6 +60,14 @@ TARGETS = {
             "tailcat.exe",
             (b"MZ",),
         ),
+        Target(
+            "windows-arm64",
+            "windows",
+            "arm64",
+            "win_arm64",
+            "tailcat.exe",
+            (b"MZ",),
+        ),
     )
 }
 

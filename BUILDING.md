@@ -15,7 +15,7 @@ A scheduled GitHub Actions workflow runs the same bounded check daily. Unrelease
 commits are reviewed separately and do not silently replace the signed release pin.
 
 `mise run wheels` downloads the exact Tailcat revision in `constants.py`, applies every patch in
-`patches/`, and cross-compiles it for five targets. It stages each executable separately, builds a
+`patches/`, and cross-compiles it for six targets. It stages each executable separately, builds a
 correctly tagged non-pure wheel, and verifies its archive paths, executable format, bundle digest,
 patch digest, and every wheel `RECORD` entry. Build inputs use
 `CGO_ENABLED=0`, upstream's official release build tags, `-trimpath`, no VCS metadata, no Go build
@@ -44,6 +44,7 @@ The wheel matrix is:
 | `linux-x86_64` | `manylinux_2_17_x86_64` | ELF |
 | `linux-aarch64` | `manylinux_2_17_aarch64` | ELF |
 | `windows-x86_64` | `win_amd64` | PE |
+| `windows-arm64` | `win_arm64` | PE |
 
 The release workflow rebuilds the matrix, creates a binary-free source distribution, generates
 checksums, creates GitHub build-provenance attestations, and uses PyPI trusted publishing. Configure

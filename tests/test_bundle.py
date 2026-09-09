@@ -6,6 +6,7 @@ import stat
 
 import pytest
 
+import tailkitty.bundle as bundle_module
 from tailkitty.bundle import BundleError, clear_bundle_cache, runtime_target, verify_bundle
 from tailkitty.constants import TAILCAT_MODULE, TAILCAT_VERSION
 
@@ -44,6 +45,12 @@ def test_verified_bundle_and_execute_bit_recovery(tmp_path) -> None:
 def test_missing_manifest_means_no_bundle(tmp_path) -> None:
     clear_bundle_cache()
     assert verify_bundle(tmp_path) is None
+
+
+def test_windows_arm64_runtime_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(bundle_module.sys, "platform", "win32")
+    monkeypatch.setattr(bundle_module.platform, "machine", lambda: "ARM64")
+    assert runtime_target() == "windows-arm64"
 
 
 def test_corrupt_bundle_is_rejected(tmp_path) -> None:
