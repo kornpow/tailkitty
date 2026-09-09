@@ -46,6 +46,7 @@ def test_release_workflow_publishes_then_creates_github_release() -> None:
         index for index, step in enumerate(steps) if step.get("name") == "Create GitHub release"
     )
     assert publish_index < release_index
+    assert steps[release_index]["env"]["GH_REPO"] == "${{ github.repository }}"
     assert "--verify-tag" in steps[release_index]["run"]
     assert "checksums/SHA256SUMS" in steps[release_index]["run"]
 
