@@ -59,7 +59,7 @@ To build and install the host wheel from this checkout instead:
 mise install
 uv sync --all-groups --locked
 mise run wheel
-uv tool install --force ./dist/tailkitty-0.2.0-py3-none-<platform>.whl
+uv tool install --force ./dist/tailkitty-0.2.1-py3-none-<platform>.whl
 ```
 
 A bundled wheel does not require Go at runtime. It provides the `tailkitty` command plus `tailcat`

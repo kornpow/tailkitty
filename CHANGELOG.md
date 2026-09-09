@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 - 2026-09-08
 
 - Match upstream token rejection for trailing CBOR data, signed 64-bit overflows, and malformed
   embedded DERP field types.
