@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Use Tailcat's declarative `serve` subcommand in managed Python server processes.
+- Add typed sync/async server options for DERP-map selection, PSK policy, file roots, and SSH
+  authorized-key sources.
+
 ## 0.2.1 - 2026-09-08
 
 - Match upstream token rejection for trailing CBOR data, signed 64-bit overflows, and malformed

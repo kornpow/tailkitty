@@ -43,17 +43,25 @@ def _serve_value(value: str | int | Iterable[str | int] | None) -> str | None:
     return ",".join(str(item) for item in value)
 
 
+def _string_list(value: str | Sequence[str] | None) -> str | None:
+    if value is None or isinstance(value, str):
+        return value
+    return ",".join(value)
+
+
 def _server_args(
     serve: str | int | Iterable[str | int] | None,
     key: str | None,
     allow: Sequence[str] | None,
     verbose: bool,
     full_address: bool,
+    derp_map_url: str | None,
+    use_preshared_key: bool | None,
+    files: str | os.PathLike[str] | None,
+    ssh_authorized_keys: str | Sequence[str] | None,
     extra_args: Sequence[str],
 ) -> list[str]:
-    args: list[str] = []
-    if (value := _serve_value(serve)) is not None:
-        args.append(f"--serve={value}")
+    args = ["serve"]
     if key:
         args.append(f"--key={key}")
     if allow is not None:
@@ -62,7 +70,17 @@ def _server_args(
         args.append("--verbose")
     if full_address:
         args.append("--full-address")
+    if derp_map_url is not None:
+        args.append(f"--derpmap-url={derp_map_url}")
+    if use_preshared_key is not None:
+        args.append(f"--psk={'true' if use_preshared_key else 'false'}")
+    if files is not None:
+        args.append(f"--files={os.fspath(files)}")
+    if (sources := _string_list(ssh_authorized_keys)) is not None:
+        args.append(f"--ssh-authorized-keys={sources}")
     args.extend(extra_args)
+    if (value := _serve_value(serve)) is not None:
+        args.append(value)
     return args
 
 
@@ -83,13 +101,28 @@ class ServerProcess:
         allow: Sequence[str] | None = None,
         verbose: bool = False,
         full_address: bool = False,
+        derp_map_url: str | None = None,
+        use_preshared_key: bool | None = None,
+        files: str | os.PathLike[str] | None = None,
+        ssh_authorized_keys: str | Sequence[str] | None = None,
         extra_args: Sequence[str] = (),
         stdin: int | IO[Any] | None = subprocess.DEVNULL,
         stdout: int | IO[Any] | None = subprocess.PIPE,
         stderr: int | IO[Any] | None = None,
         env: dict[str, str] | None = None,
     ) -> None:
-        self.arguments = _server_args(serve, key, allow, verbose, full_address, extra_args)
+        self.arguments = _server_args(
+            serve,
+            key,
+            allow,
+            verbose,
+            full_address,
+            derp_map_url,
+            use_preshared_key,
+            files,
+            ssh_authorized_keys,
+            extra_args,
+        )
         self.stdin = stdin
         self.stdout_target = stdout
         self.stderr_target = stderr
@@ -203,10 +236,25 @@ class AsyncServerProcess:
         allow: Sequence[str] | None = None,
         verbose: bool = False,
         full_address: bool = False,
+        derp_map_url: str | None = None,
+        use_preshared_key: bool | None = None,
+        files: str | os.PathLike[str] | None = None,
+        ssh_authorized_keys: str | Sequence[str] | None = None,
         extra_args: Sequence[str] = (),
         env: dict[str, str] | None = None,
     ) -> None:
-        self.arguments = _server_args(serve, key, allow, verbose, full_address, extra_args)
+        self.arguments = _server_args(
+            serve,
+            key,
+            allow,
+            verbose,
+            full_address,
+            derp_map_url,
+            use_preshared_key,
+            files,
+            ssh_authorized_keys,
+            extra_args,
+        )
         self.env = env
         self.process: asyncio.subprocess.Process | None = None
         self._token: str | None = None

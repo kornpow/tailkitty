@@ -63,13 +63,41 @@ def test_server_process_captures_token_without_consuming_stdout(fake_backend) ->
     with ServerProcess(serve=[80, 443]) as server:
         assert server.token == TOKEN
         assert server.is_running
-        assert server.arguments == ["--serve=80,443"]
+        assert server.arguments == ["serve", "80,443"]
     assert not server.is_running
 
 
 def test_empty_allow_means_allow_none(fake_backend) -> None:
     server = ServerProcess(allow=[])
-    assert server.arguments == ["--allow=none"]
+    assert server.arguments == ["serve", "--allow=none"]
+
+
+def test_server_typed_v06_options(fake_backend, tmp_path) -> None:
+    server = ServerProcess(
+        serve=[80, "ssh", "files"],
+        key="server",
+        allow=["nodekey:one", "nodekey:two"],
+        verbose=True,
+        full_address=True,
+        derp_map_url="https://derp.example/map",
+        use_preshared_key=False,
+        files=tmp_path,
+        ssh_authorized_keys=["alice@github", "./authorized_keys"],
+        extra_args=["--json"],
+    )
+    assert server.arguments == [
+        "serve",
+        "--key=server",
+        "--allow=nodekey:one,nodekey:two",
+        "--verbose",
+        "--full-address",
+        "--derpmap-url=https://derp.example/map",
+        "--psk=false",
+        f"--files={tmp_path}",
+        "--ssh-authorized-keys=alice@github,./authorized_keys",
+        "--json",
+        "80,ssh,files",
+    ]
 
 
 def test_async_apis(fake_backend) -> None:

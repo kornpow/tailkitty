@@ -215,6 +215,27 @@ with ServerProcess(serve=[8080, 8443], key="new", allow=["nodekey:..."]) as serv
 context manager terminates the server and escalates to a kill if it does not stop within its grace
 period. `allow=[]` means `--allow=none`; `allow=None` preserves upstream's allow-all default.
 
+Serve a directory and authenticated SSH without assembling command-line flags:
+
+```python
+from pathlib import Path
+
+from tailkitty import ServerProcess
+
+with ServerProcess(
+    serve=["files", "ssh"],
+    files=Path("/srv/share"),
+    ssh_authorized_keys=["alice@github", "/etc/ssh/authorized_keys"],
+    allow=["nodekey:..."],
+    use_preshared_key=True,
+) as server:
+    print(server.token)
+```
+
+`derp_map_url`, `use_preshared_key`, `files`, and `ssh_authorized_keys` are available on both
+`ServerProcess` and `AsyncServerProcess`. `extra_args` remains available for new upstream options
+that Tailkitty does not yet model.
+
 ### Use asyncio
 
 ```python
