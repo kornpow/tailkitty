@@ -43,6 +43,18 @@ def _serve_value(value: str | int | Iterable[str | int] | None) -> str | None:
     return ",".join(str(item) for item in value)
 
 
+def _udp_value(value: int | Iterable[int] | None) -> str | None:
+    if value is None:
+        return None
+    ports = [value] if isinstance(value, int) else list(value)
+    if not ports:
+        return None
+    for port in ports:
+        if not 0 <= port <= 65535:
+            raise ValueError(f"UDP port must be between 0 and 65535, got {port}")
+    return ",".join(str(port) for port in ports)
+
+
 def _string_list(value: str | Sequence[str] | None) -> str | None:
     if value is None or isinstance(value, str):
         return value
@@ -59,6 +71,7 @@ def _server_args(
     use_preshared_key: bool | None,
     files: str | os.PathLike[str] | None,
     ssh_authorized_keys: str | Sequence[str] | None,
+    udp: int | Iterable[int] | None,
     extra_args: Sequence[str],
 ) -> list[str]:
     args = ["serve"]
@@ -78,6 +91,8 @@ def _server_args(
         args.append(f"--files={os.fspath(files)}")
     if (sources := _string_list(ssh_authorized_keys)) is not None:
         args.append(f"--ssh-authorized-keys={sources}")
+    if (udp_ports := _udp_value(udp)) is not None:
+        args.append(f"--udp={udp_ports}")
     args.extend(extra_args)
     if (value := _serve_value(serve)) is not None:
         args.append(value)
@@ -105,6 +120,7 @@ class ServerProcess:
         use_preshared_key: bool | None = None,
         files: str | os.PathLike[str] | None = None,
         ssh_authorized_keys: str | Sequence[str] | None = None,
+        udp: int | Iterable[int] | None = None,
         extra_args: Sequence[str] = (),
         stdin: int | IO[Any] | None = subprocess.DEVNULL,
         stdout: int | IO[Any] | None = subprocess.PIPE,
@@ -121,6 +137,7 @@ class ServerProcess:
             use_preshared_key,
             files,
             ssh_authorized_keys,
+            udp,
             extra_args,
         )
         self.stdin = stdin
@@ -240,6 +257,7 @@ class AsyncServerProcess:
         use_preshared_key: bool | None = None,
         files: str | os.PathLike[str] | None = None,
         ssh_authorized_keys: str | Sequence[str] | None = None,
+        udp: int | Iterable[int] | None = None,
         extra_args: Sequence[str] = (),
         env: dict[str, str] | None = None,
     ) -> None:
@@ -253,6 +271,7 @@ class AsyncServerProcess:
             use_preshared_key,
             files,
             ssh_authorized_keys,
+            udp,
             extra_args,
         )
         self.env = env

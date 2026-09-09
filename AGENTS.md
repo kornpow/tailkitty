@@ -46,6 +46,7 @@ compatibility and fail-closed bundle discovery are core requirements.
 | `src/tailkitty/backend.py` | Backend precedence and command execution |
 | `src/tailkitty/bundle.py` | Runtime manifest and executable integrity checks |
 | `src/tailkitty/client.py` | Sync and asyncio client APIs |
+| `src/tailkitty/udp.py` | Typed SOCKS5 UDP framing, connections, and lifecycle |
 | `src/tailkitty/process.py` | Managed server processes and low-level async execution |
 | `src/tailkitty/cli.py` | Python-native commands and upstream pass-through |
 | `src/tailkitty/constants.py` | Package, Go, module, and upstream Tailcat pins |

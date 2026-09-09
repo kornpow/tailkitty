@@ -113,6 +113,11 @@ These services have broader consequences than a one-shot byte stream:
 
 Tailkitty does not add authentication to the application behind a served port.
 
+UDP serving is separately opt-in through `ServerProcess(udp=...)`. Selected Tailcat UDP ports are
+forwarded only to matching `127.0.0.1` UDP ports; the local application still needs its own
+authentication where appropriate. UDP source addresses seen by the local application belong to
+the proxy path and are not a substitute for Tailcat client identity or `--allow`.
+
 ## Bundle trust model
 
 Platform wheels contain an executable built from the immutable Tailcat pin. The build manifest

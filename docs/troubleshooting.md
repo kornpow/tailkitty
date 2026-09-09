@@ -177,6 +177,19 @@ Failure to become direct usually points to NAT, firewall, captive-network, or UD
 connection can still work through DERP. Compare both peers from another network before assuming a
 packaging defect.
 
+## UDP request times out
+
+- Confirm the local UDP application is bound to `127.0.0.1:<port>` on the server before starting
+  `ServerProcess(udp=<port>)`.
+- `serve=<port>` exposes TCP; `udp=<port>` exposes UDP. Configure the protocol you actually use.
+- Keep each datagram at or below `MAX_UDP_PAYLOAD` (1232 bytes).
+- Set a finite receive timeout while diagnosing; UDP has no delivery or response guarantee.
+- Confirm the client satisfies the server's `allow` policy.
+- An external `TAILKITTY_BACKEND` needs Tailkitty's `serve --udp` patch for server-side forwarding.
+
+Always close `UDPConnection`, preferably with a context manager, so its private SOCKS5 proxy and
+Tailcat subprocess are reaped.
+
 ## DNS destination fails
 
 Inspect the TXT record with a DNS tool:

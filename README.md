@@ -28,6 +28,7 @@ control server.
 | --- | --- |
 | Send bytes between two computers | [One-shot pipe](#one-shot-pipe) |
 | Reach a remote web app or database | [Forward a port](#forward-a-port) |
+| Exchange UDP datagrams | [Typed UDP](#typed-udp) |
 | Use Tailcat from Python | [Python quickstart](#python-quickstart) |
 | Transfer files or use SSH | [Recipes](https://github.com/kornpow/tailkitty/blob/main/docs/recipes.md) |
 | Diagnose an installation | [Troubleshooting](https://github.com/kornpow/tailkitty/blob/main/docs/troubleshooting.md) |
@@ -163,6 +164,33 @@ exit. See the [Python API guide](https://github.com/kornpow/tailkitty/blob/main/
 for asyncio, streaming, token handling, server
 options, exceptions, and low-level execution.
 
+### Typed UDP
+
+Tailkitty preserves application datagram boundaries instead of treating UDP as a byte stream. On
+the server, bind your UDP application to localhost and opt in to the same Tailcat port:
+
+```python
+from tailkitty import ServerProcess
+
+with ServerProcess(udp=5353, key="new") as server:
+    print(server.token)
+    input("Press Enter to stop the UDP tunnel... ")
+```
+
+On the client:
+
+```python
+from tailkitty import Client
+
+with Client("tc...").connect_udp(5353, timeout=10) as connection:
+    reply = connection.request(b"one datagram", timeout=3)
+    print(reply.data)
+```
+
+`send()` and `receive()` each handle exactly one datagram. Payloads are limited to
+`MAX_UDP_PAYLOAD` (1232 bytes), the safe size for Tailcat's tunnel MTU. Asyncio equivalents are
+available through `AsyncClient.connect_udp()`.
+
 ## CLI model
 
 Tailkitty owns a small Python-native command surface:
@@ -189,9 +217,9 @@ tailkitty socks 'tc...' curl http://server.tailcat:8080/
 tailkitty genkey --client --key=client-default
 ```
 
-Run `tailkitty readme` for the documentation embedded in the bundled Tailcat version. Tailcat v0.6
-also supports application-layer UDP through its Go API and SOCKS5 UDP association; Tailkitty does
-not currently expose a separate typed Python UDP API.
+Run `tailkitty readme` for the documentation embedded in the bundled Tailcat version. Tailkitty's
+typed UDP API uses Tailcat v0.6's SOCKS5 UDP association and an auditable bundled patch that adds
+opt-in `127.0.0.1` UDP serving to the CLI.
 
 ## Addresses and DNS
 
@@ -237,8 +265,9 @@ tailkitty resolve 'tc...' > full-address.txt
 | `Client.request(...)` | Yes | Finite request/response exchange |
 | `Client.run(...)` | Yes | Finite exchange with exit status and stderr |
 | `Client.connect(...)` | Yes | Full-duplex `subprocess.Popen` connection |
+| `Client.connect_udp(...)` | Yes | Datagram-preserving UDP connection |
 | `ServerProcess` | Yes | Managed synchronous server |
-| `AsyncClient` / `AsyncServerProcess` | Yes | Asyncio equivalents |
+| `AsyncClient` / `AsyncServerProcess` | Yes | Asyncio equivalents, including UDP |
 | `run(...)` / `run_async(...)` | Yes | Low-level Tailcat command execution |
 | `diagnostics()` | Yes | Structured backend and environment report |
 

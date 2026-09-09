@@ -12,16 +12,20 @@ from .destination import DestinationError, resolve_destination, resolve_destinat
 from .diagnostics import diagnostics
 from .process import AsyncServerProcess, ServerProcess, ServerStartError, run_async, send
 from .token import ConnInfo, DerpNode, DerpRegion, TokenError, parse_token, resolve_token
+from .udp import MAX_UDP_PAYLOAD, AsyncUDPConnection, Datagram, UDPConnection, UDPError
 
 __all__ = [
+    "MAX_UDP_PAYLOAD",
     "AsyncClient",
     "AsyncServerProcess",
+    "AsyncUDPConnection",
     "BackendInfo",
     "BackendNotFound",
     "BundleError",
     "BundleManifest",
     "Client",
     "ConnInfo",
+    "Datagram",
     "DerpMapCache",
     "DerpMapError",
     "DerpNode",
@@ -30,6 +34,8 @@ __all__ = [
     "ServerProcess",
     "ServerStartError",
     "TokenError",
+    "UDPConnection",
+    "UDPError",
     "diagnostics",
     "inspect_backend",
     "parse_token",

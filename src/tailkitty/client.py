@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import subprocess
-from typing import Self
+from typing import TYPE_CHECKING, Self
+
+if TYPE_CHECKING:
+    from .udp import AsyncUDPConnection, UDPConnection
 
 from .backend import find_backend
 from .destination import resolve_destination, resolve_destination_async
@@ -79,6 +82,18 @@ class Client:
         self._token = None
         return self
 
+    def connect_udp(
+        self,
+        port: int,
+        *,
+        host: str = "server.tailcat",
+        timeout: float = 20.0,
+    ) -> UDPConnection:
+        """Open a datagram-preserving UDP flow through this Tailcat server."""
+        from .udp import UDPConnection
+
+        return UDPConnection.open(self.token, port, host=host, timeout=timeout)
+
 
 class AsyncClient:
     """Asyncio Tailcat client."""
@@ -148,3 +163,15 @@ class AsyncClient:
     def refresh(self) -> Self:
         self._token = None
         return self
+
+    async def connect_udp(
+        self,
+        port: int,
+        *,
+        host: str = "server.tailcat",
+        timeout: float = 20.0,
+    ) -> AsyncUDPConnection:
+        """Open a datagram-preserving UDP flow through this Tailcat server."""
+        from .udp import AsyncUDPConnection
+
+        return await AsyncUDPConnection.open(await self.resolve(), port, host=host, timeout=timeout)

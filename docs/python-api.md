@@ -18,6 +18,7 @@ uv add tailkitty
 | Send one finite request | `Client.request()` |
 | Keep exit status and stderr | `Client.run()` |
 | Stream in both directions | `Client.connect()` |
+| Exchange UDP datagrams | `Client.connect_udp()` |
 | Send bytes with a one-line helper | `send()` |
 | Run a managed server | `ServerProcess` |
 | Do the same work with asyncio | `AsyncClient`, `AsyncServerProcess` |
@@ -185,6 +186,64 @@ termination, and reaping.
 For a minimal one-shot exchange, `send(destination, data, port=0, timeout=None)` is a convenience
 wrapper around `Client(destination).request(...)`.
 
+## UDP datagrams
+
+`connect_udp()` returns a managed connection that keeps datagram boundaries intact:
+
+```python
+from tailkitty import Client, MAX_UDP_PAYLOAD
+
+with Client("tc...").connect_udp(5353, timeout=10) as connection:
+    connection.send(b"first datagram")
+    response = connection.receive(timeout=3)
+    print(response.data, response.host, response.port)
+
+    second = connection.request(b"second datagram", timeout=3)
+    assert len(second.data) <= MAX_UDP_PAYLOAD
+```
+
+Each `send()` transmits one datagram and each `receive()` returns one immutable `Datagram` with
+`data`, `host`, and `port` fields. `request()` is a send followed by one receive; UDP itself does
+not guarantee that the response corresponds to the request. A receive timeout raises
+`TimeoutError` (`socket.timeout` in synchronous code).
+
+The default target host, `server.tailcat`, means the named Tailcat server. Set `host` to an IP or
+hostname only when the server is intentionally configured as an exit node:
+
+```python
+connection = Client("tc...").connect_udp(53, host="192.0.2.53")
+```
+
+Tailcat's IPv6 tunnel MTU makes 1232 bytes the largest safe UDP payload. Tailkitty rejects larger
+writes rather than relying on fragmentation. SOCKS5 fragmentation is not supported. Each
+connection owns a private loopback-only SOCKS5 proxy and native Tailcat process; use a context
+manager or call `close()`.
+
+The asyncio API has matching semantics:
+
+```python
+from tailkitty import AsyncClient
+
+async with await AsyncClient("tc...").connect_udp(5353, timeout=10) as connection:
+    response = await connection.request(b"datagram", timeout=3)
+    print(response.data)
+```
+
+On the server, start the UDP application on localhost first, then expose the matching port:
+
+```python
+from tailkitty import ServerProcess
+
+with ServerProcess(udp=[5353, 9000], key="new", allow=["nodekey:..."]) as server:
+    print(server.token)
+    input("Press Enter to stop the UDP tunnel... ")
+```
+
+`udp` accepts one integer or an iterable of integers. It is opt-in and independent of TCP `serve`;
+the bundled backend forwards only the selected Tailcat UDP ports to the same ports on `127.0.0.1`.
+This server feature is a Tailkitty patch to the pinned executable. An unpatched external backend
+selected through `TAILKITTY_BACKEND` may reject `--udp`.
+
 ## Managed synchronous server
 
 ```python
@@ -230,6 +289,7 @@ equivalent.
 | `use_preshared_key` | Explicitly enable or disable address PSKs; `None` uses upstream default |
 | `files` | File-service root and optional mode suffix |
 | `ssh_authorized_keys` | One source or a sequence of files, literal keys, or `user@github` values |
+| `udp` | UDP port or iterable forwarded to matching localhost UDP ports |
 | `extra_args` | Escape hatch for upstream flags not modeled yet |
 | `stdin`, `stdout`, `stderr` | Synchronous child-process stream targets |
 | `env` | Environment additions for the child process |
@@ -340,6 +400,7 @@ target, wheel tag, Tailcat version, compiler version, size, digest, and verified
 | `BackendNotFound` | Backend discovery and integrity translation |
 | `BundleError` | Direct bundle validation |
 | `ServerStartError` | Managed server exits before advertising an address |
+| `UDPError` | SOCKS5 negotiation, framing, subprocess, or closed-connection failure |
 | `TimeoutError` | Managed startup or async operation timeout |
 | `subprocess.TimeoutExpired` | Synchronous finite client timeout |
 | `subprocess.CalledProcessError` | Checked client or low-level command fails |

@@ -239,6 +239,33 @@ The SOCKS proxy can also route ordinary destinations through an exit node:
 tailkitty socks 'tc...' curl https://example.com/
 ```
 
+## Exchange UDP datagrams from Python
+
+Start a UDP service on `127.0.0.1:5353` on the server, then expose that same UDP port:
+
+```python
+from tailkitty import ServerProcess
+
+with ServerProcess(udp=5353, key="new", allow=["nodekey:..."]) as server:
+    print(server.token)
+    input("Press Enter to stop the UDP tunnel... ")
+```
+
+On the client:
+
+```python
+from tailkitty import Client
+
+with Client("tc...").connect_udp(5353, timeout=10) as connection:
+    connection.send(b"one datagram")
+    response = connection.receive(timeout=3)
+    print(response.data)
+```
+
+Use `AsyncClient.connect_udp()` for asyncio applications. Keep payloads at or below 1232 bytes.
+UDP is unreliable and unordered by design, so applications must define their own retry and
+request-correlation behavior when needed.
+
 ## Check relay and direct connectivity
 
 One ping reports the path used:

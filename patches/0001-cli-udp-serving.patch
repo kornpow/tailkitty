@@ -1,0 +1,118 @@
+diff --git a/cmd/tailcat/tailcat.go b/cmd/tailcat/tailcat.go
+index fbd6372..b2b8d74 100644
+--- a/cmd/tailcat/tailcat.go
++++ b/cmd/tailcat/tailcat.go
+@@ -57,6 +57,7 @@ var (
+ 	flagFiles             *string
+ 	flagSSHAuthorizedKeys *string
+ 	flagPSK               *bool
++	flagUDP               *string
+ 	flagVerbose           *bool
+ 	flagFullAddress       *bool
+ 	flagJSON              *bool
+@@ -103,6 +104,7 @@ func newRootCommand() *ff.Command {
+ 	flagFiles = serveFS.StringLong("files", "", "directory to serve to SFTP clients (scp, sftp) with the 'files' service, with an optional :ro (read-only, the default), :rw (read-write), :wo (flat write-only drop box), or :wo+ (recursive write-only drop box) suffix. If empty, the current directory is served read-only. Giving --files implies the 'files' service.")
+ 	flagSSHAuthorizedKeys = serveFS.StringLong("ssh-authorized-keys", "", "comma-separated SSH public key sources for the 'ssh' service: authorized_keys file paths, literal OpenSSH public key lines, or names like 'alice@github' (fetched from https://github.com/alice.keys). All sources are loaded and validated at startup.")
+ 	flagPSK = serveFS.BoolLongDefault("psk", true, "include a WireGuard pre-shared key in the tailcat address (recommended). Set false only for shorter addresses and compatibility with tailcat clients v0.5.0 and earlier; this weakens security.")
++	flagUDP = serveFS.StringLong("udp", "", "comma-separated UDP ports or ranges to proxy to the same ports on localhost")
+ 
+ 	recvFS := ff.NewFlagSet("recv").SetParent(serveFS)
+ 	flagRecvAcceptDirs := recvFS.BoolLong("accept-dirs", "accept directory trees (tailcat cp -r), keeping requested file names when available. The trade-off: senders can then make and stat directories and learn whether some names already exist in the drop box. The default flat mode reveals nothing about existing files, but accepts only single files, each saved under a server-chosen unique name.")
+@@ -1174,6 +1176,13 @@ func server(logf logger.Logf, serveSpec string) {
+ 	if err != nil {
+ 		log.Fatalf("invalid port or service to serve: %v", err)
+ 	}
++	udpPortSet, udpServices, err := parsePortSet(*flagUDP)
++	if err != nil {
++		log.Fatalf("invalid UDP port to serve: %v", err)
++	}
++	if len(udpServices) != 0 {
++		log.Fatalf("--udp accepts only port numbers and ranges")
++	}
+ 	if *flagFiles != "" {
+ 		if !tailCatSSHEnabled {
+ 			log.Fatalf("--files requires SSH support, not included in binary per build tags")
+@@ -1212,7 +1221,7 @@ func server(logf logger.Logf, serveSpec string) {
+ 	}
+ 	// A server running only named services isn't the empty-port-list
+ 	// accept-one-connection stdout mode.
+-	oneShotStdout := len(portSet) == 0 && len(services) == 0
++	oneShotStdout := len(portSet) == 0 && len(services) == 0 && len(udpPortSet) == 0
+ 
+ 	var reg *tailcfg.DERPRegion
+ 	var devDERP *derpserver.Server
+@@ -1322,6 +1331,9 @@ func server(logf logger.Logf, serveSpec string) {
+ 		}
+ 		s.ServedTCPPorts = portRanges(ports)
+ 	}
++	if len(udpPortSet) != 0 {
++		s.ServedUDPPorts = portRanges(slices.Sorted(maps.Keys(udpPortSet)))
++	}
+ 	if *flagAllow != "" {
+ 		for _, ks := range strings.Split(*flagAllow, ",") {
+ 			if ks == "none" {
+@@ -1347,6 +1360,24 @@ func server(logf logger.Logf, serveSpec string) {
+ 		}
+ 	}
+ 
++	udpForwardTo := func(ipPortStr string) func(tailcat.ConnPacketConn) {
++		return func(c tailcat.ConnPacketConn) {
++			addr, err := net.ResolveUDPAddr("udp", ipPortStr)
++			if err != nil {
++				logf("error resolving UDP target %v: %v", ipPortStr, err)
++				c.Close()
++				return
++			}
++			localConn, err := net.DialUDP("udp", nil, addr)
++			if err != nil {
++				logf("error proxying UDP to %v: %v", ipPortStr, err)
++				c.Close()
++				return
++			}
++			tailcat.ProxyPacketConns(c, localConn)
++		}
++	}
++
+ 	if services.Contains("exit-node") {
+ 		s.OnTCPForward = func(dst netip.AddrPort) (handler func(net.Conn)) {
+ 			return tcpForwardTo(dst.String())
+@@ -1387,6 +1418,15 @@ func server(logf logger.Logf, serveSpec string) {
+ 		return tcpForwardTo(fmt.Sprintf("localhost:%v", port))
+ 	}
+ 
++	if len(udpPortSet) != 0 {
++		s.OnUDP = func(port uint16) (handler func(tailcat.ConnPacketConn)) {
++			if !udpPortSet.Contains(port) {
++				return nil
++			}
++			return udpForwardTo(fmt.Sprintf("127.0.0.1:%v", port))
++		}
++	}
++
+ 	if err := s.Start(); err != nil {
+ 		log.Fatalf("Server.Start: %v", err)
+ 	}
+diff --git a/cmd/tailcat/tailcat.go b/cmd/tailcat/tailcat.go
+--- a/cmd/tailcat/tailcat.go
++++ b/cmd/tailcat/tailcat.go
+@@ -416,6 +416,9 @@ The arguments are port numbers, port ranges, and service names,
+ either as separate arguments or comma-separated. Ports are proxied
+ to the same port on localhost. Service names are:
+ 
++The --udp flag separately selects UDP ports or ranges to proxy to the
++same ports on localhost. UDP is opt-in and does not change TCP serving.
++
+ 	all          serve all ports
+ 	exit-node    run an exit node for all addresses
+ 	ssh          SSH server requiring a public key listed by
+@@ -439,6 +442,10 @@ Serve some ports:
+ 
+ 	tailcat serve 22,80,443,8000-8999
+ 
++Serve UDP port 53 while also serving TCP port 8080:
++
++	tailcat serve --udp=53 8080
++
+ Serve all ports:
+ 
+ 	tailcat serve all

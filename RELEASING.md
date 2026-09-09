@@ -122,16 +122,20 @@ command line, in shell history, or in repository files.
 If the automated release is still running, do not race it with a local upload. Cancel or disable
 the redundant publisher first so one path owns publication.
 
-## 7. Create or verify the GitHub release
+## 7. Verify the GitHub release
 
-The release should contain the same seven artifacts published to PyPI, plus checksums when the
-automated workflow produced them. For a controlled local fallback:
+After Trusted Publishing succeeds, the workflow creates the GitHub Release and attaches the same
+seven artifacts plus `SHA256SUMS`. It verifies that the tag already exists before creating the
+release. Confirm those eight assets are present.
+
+For a controlled local fallback when automation was not used:
 
 ```console
 gh release create vX.Y.Z \
   --title "Tailkitty vX.Y.Z" \
   --generate-notes \
-  dist/release/*
+  dist/release/* \
+  checksums/SHA256SUMS
 ```
 
 ## 8. Verify from the public index

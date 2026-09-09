@@ -35,6 +35,7 @@ Tailcat interoperability depends on Tailscale's implementations of:
 - WireGuard session establishment and encryption.
 - Disco-key peer discovery and endpoint exchange.
 - STUN-based NAT traversal and UDP hole punching.
+- Application UDP flows with preserved datagram boundaries.
 - DERP relay transport and path selection.
 - A userspace TCP/IP stack based on gVisor netstack.
 
@@ -62,6 +63,17 @@ directly to Tailcat rather than an unnecessary wrapper process.
 
 This small ownership surface prevents Tailkitty's parser from lagging or subtly changing upstream
 commands.
+
+## Typed UDP flow
+
+Each `UDPConnection` owns a private loopback SOCKS5 UDP association. Python encodes and validates
+the SOCKS5 datagram envelope; the upstream process carries each payload over Tailcat's WireGuard
+tunnel without merging datagrams. A small recorded source patch adds opt-in `serve --udp`
+forwarding from selected tunnel ports to matching `127.0.0.1` UDP ports.
+
+This keeps the cryptographic and network stack native while exposing typed synchronous and asyncio
+lifecycle APIs. Closing a connection closes its sockets and terminates and reaps the owned Tailcat
+process. Payloads larger than Tailcat's 1232-byte safe tunnel size are rejected before sending.
 
 ## Address flow
 

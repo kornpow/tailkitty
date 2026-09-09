@@ -17,12 +17,13 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   publish:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
-      contents: read
+      contents: write
       attestations: write
     steps:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
@@ -31,7 +32,7 @@ jobs:
           merge-multiple: true
           path: dist
       - name: Generate checksums
-        run: mkdir -p checksums && sha256sum dist/* | sort > checksums/SHA256SUMS
+        run: mkdir -p checksums && (cd dist && sha256sum * | sort) > checksums/SHA256SUMS
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: checksums
@@ -43,3 +44,13 @@ jobs:
         with:
           packages-dir: dist
           attestations: true
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}"
+          --verify-tag
+          --title "Tailkitty ${GITHUB_REF_NAME}"
+          --generate-notes
+          dist/*
+          checksums/SHA256SUMS

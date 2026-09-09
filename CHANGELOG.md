@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add typed synchronous and asyncio UDP connections that preserve datagram boundaries through
+  Tailcat's SOCKS5 UDP relay.
+- Add opt-in `ServerProcess(udp=...)` forwarding from Tailcat UDP ports to matching loopback UDP
+  ports, with a real encrypted UDP wheel smoke test.
+- Create GitHub Releases automatically after successful Trusted Publishing, attaching all wheels,
+  the source distribution, and SHA-256 checksums.
+
 ## 0.2.2 - 2026-09-08
 
 - Use Tailcat's declarative `serve` subcommand in managed Python server processes.

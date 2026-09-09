@@ -28,6 +28,7 @@ This comparison was checked on 2026-09-08 against `pytailcat` 0.1.4 and Tailkitt
 | DERP expansion | Delegated to executable | Pure Python with bounded ETag cache and stale fallback |
 | DNS destinations | Delegated to executable | Pure-Python sync and asyncio resolution |
 | Client API | Thin synchronous process wrapper | Typed finite, streaming, sync, and asyncio clients |
+| Application UDP | Depends on older bundled executable | Typed sync/async datagrams and opt-in localhost serving |
 | Server API | Synchronous `ServerProcess` | Managed sync/async servers with typed v0.6 options |
 | Lifecycle cleanup | Basic process management | Bounded startup, terminate/kill escalation, reaping |
 | Bundle verification | Package transport integrity | Runtime target, schema, size, and SHA-256 verification |

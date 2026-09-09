@@ -154,7 +154,8 @@ The smoke test:
 3. Runs `tailkitty doctor --json` and confirms the bundled backend is selected.
 4. Starts an isolated local DERP/STUN relay through Tailcat's test mode.
 5. Starts a peer and performs an actual encrypted ping.
-6. Applies five-second startup and client bounds, followed by bounded termination.
+6. Sends and receives a real application UDP datagram through the same isolated relay.
+7. Applies five-second startup and client bounds, followed by bounded termination.
 
 It does not depend on public relay availability and does not touch saved developer keys.
 

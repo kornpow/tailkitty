@@ -83,6 +83,7 @@ def test_server_typed_v06_options(fake_backend, tmp_path) -> None:
         use_preshared_key=False,
         files=tmp_path,
         ssh_authorized_keys=["alice@github", "./authorized_keys"],
+        udp=[53, 5353],
         extra_args=["--json"],
     )
     assert server.arguments == [
@@ -95,9 +96,15 @@ def test_server_typed_v06_options(fake_backend, tmp_path) -> None:
         "--psk=false",
         f"--files={tmp_path}",
         "--ssh-authorized-keys=alice@github,./authorized_keys",
+        "--udp=53,5353",
         "--json",
         "80,ssh,files",
     ]
+
+
+def test_server_rejects_invalid_udp_port(fake_backend) -> None:
+    with pytest.raises(ValueError, match="UDP port must be between"):
+        ServerProcess(udp=65_536)
 
 
 def test_async_apis(fake_backend) -> None:

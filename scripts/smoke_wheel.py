@@ -15,6 +15,41 @@ from pathlib import Path
 
 from .targets import host_target
 
+UDP_SMOKE = r"""import socket
+import threading
+
+from tailkitty import Client, ServerProcess
+
+sock = socket.socket(type=socket.SOCK_DGRAM)
+sock.settimeout(5)
+sock.bind(("127.0.0.1", 0))
+port = sock.getsockname()[1]
+
+def echo():
+    data, source = sock.recvfrom(2048)
+    sock.sendto(data, source)
+
+thread = threading.Thread(target=echo, daemon=True)
+thread.start()
+try:
+    server = ServerProcess(
+        key="new",
+        udp=port,
+        env={"TS_DEBUG_TAILCAT_LOCAL_DERP": "1"},
+    )
+    try:
+        server.start(timeout=5)
+        with Client(server.token).connect_udp(port, timeout=5) as connection:
+            response = connection.request(b"tailkitty-udp-smoke", timeout=3)
+            assert response.data == b"tailkitty-udp-smoke"
+    finally:
+        server.stop(grace_period=2)
+    thread.join(timeout=1)
+    assert not thread.is_alive()
+finally:
+    sock.close()
+"""
+
 
 def smoke_data_plane(backend: Path) -> None:
     """Prove the bundled helper can complete a real encrypted peer handshake."""
@@ -86,12 +121,19 @@ def smoke_wheel(wheel: Path, *, uv: str = "uv") -> dict[str, object]:
             raise RuntimeError("installed wheel did not discover its verified host bundle")
         backend = Path(report["backend"]["path"])
         smoke_data_plane(backend)
+        subprocess.run(
+            [str(interpreter), "-c", UDP_SMOKE],
+            cwd=root,
+            check=True,
+            timeout=15,
+        )
         return {
             "wheel": wheel.name,
             "target": target.name,
             "backend": report["backend"]["path"],
             "tailcat_version": bundle["tailcat_version"],
             "data_plane": "verified",
+            "udp_data_plane": "verified",
             "verified": bundle["verified"],
         }
 
