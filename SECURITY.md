@@ -15,8 +15,8 @@ sensitive capability material even though it contains no server private key.
 
 A public DNS TXT record is not a secret. Only publish `tailcat=` addresses for servers that
 authenticate clients independently with tunnel-level `--allow`, SSH authorized keys, or both.
-Never publish an unrestricted `no-auth-ssh` address. Unknown future top-level address fields are
-preserved during Python resolution so security properties are not silently discarded.
+Never publish an unrestricted `no-auth-ssh` address. Unknown future address fields are preserved
+during Python parsing and resolution so security properties are not silently discarded.
 
 `TAILKITTY_BACKEND` deliberately overrides the bundled executable. Treat that setting as code
 execution authority: Tailkitty checks that the path is executable, but cannot establish the origin

@@ -32,6 +32,10 @@ class DerpNode:
     stun_port: int = 0
     derp_port: int = 0
     insecure_for_tests: bool = False
+    extensions: dict[Any, Any] = field(default_factory=dict, repr=False)
+
+    def __post_init__(self) -> None:
+        _validate_extension_keys(self.extensions, {"n", "i", "h", "t", "4", "6", "s", "d", "x"})
 
     @classmethod
     def from_wire(cls, value: dict[str, Any]) -> DerpNode:
@@ -53,6 +57,11 @@ class DerpNode:
             stun_port=value.get("s", 0),
             derp_port=value.get("d", 0),
             insecure_for_tests=value.get("x", False),
+            extensions={
+                key: item
+                for key, item in value.items()
+                if key not in {"n", "i", "h", "t", "4", "6", "s", "d", "x"}
+            },
         )
 
     @classmethod
@@ -70,7 +79,7 @@ class DerpNode:
         )
 
     def to_wire(self) -> dict[str, Any]:
-        values = {
+        known = {
             "n": self.name,
             "i": self.region_id,
             "h": self.hostname,
@@ -81,7 +90,9 @@ class DerpNode:
             "d": self.derp_port,
             "x": self.insecure_for_tests,
         }
-        return {key: value for key, value in values.items() if value not in ("", 0, False)}
+        wire = dict(self.extensions)
+        wire.update({key: value for key, value in known.items() if value not in ("", 0, False)})
+        return wire
 
 
 @dataclass(slots=True)
@@ -90,6 +101,10 @@ class DerpRegion:
     region_code: str = ""
     region_name: str = ""
     nodes: list[DerpNode] = field(default_factory=list)
+    extensions: dict[Any, Any] = field(default_factory=dict, repr=False)
+
+    def __post_init__(self) -> None:
+        _validate_extension_keys(self.extensions, {"i", "c", "m", "N"})
 
     @classmethod
     def from_wire(cls, value: dict[str, Any]) -> DerpRegion:
@@ -108,6 +123,9 @@ class DerpRegion:
             region_code=value.get("c", ""),
             region_name=value.get("m", ""),
             nodes=[DerpNode.from_wire(node) for node in nodes],
+            extensions={
+                key: item for key, item in value.items() if key not in {"i", "c", "m", "N"}
+            },
         )
 
     @classmethod
@@ -132,13 +150,15 @@ class DerpRegion:
                 if item.get("h"):
                     item.pop("n", None)
             nodes.append(item)
-        values: dict[str, Any] = {
+        known: dict[str, Any] = {
             "i": 0 if compact else self.region_id,
             "c": "" if compact else self.region_code,
             "m": "" if compact else self.region_name,
             "N": nodes,
         }
-        return {key: value for key, value in values.items() if value not in ("", 0, False, [])}
+        wire = dict(self.extensions)
+        wire.update({key: value for key, value in known.items() if value not in ("", 0, False, [])})
+        return wire
 
 
 @dataclass(slots=True)
@@ -151,10 +171,7 @@ class ConnInfo:
     extensions: dict[Any, Any] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
-        reserved = self.extensions.keys() & {"p", "k", "q", "r", "i"}
-        if reserved:
-            names = ", ".join(sorted(repr(key) for key in reserved))
-            raise TokenError(f"extension fields use reserved connection-token keys: {names}")
+        _validate_extension_keys(self.extensions, {"p", "k", "q", "r", "i"})
         if len(self.server_public) != 32:
             raise TokenError(f"server public key must be 32 bytes, got {len(self.server_public)}")
         for label, value in (
@@ -294,6 +311,13 @@ def _require_mapping(value: Any, label: str) -> None:
 def _require_int64(value: int, label: str) -> None:
     if not -(2**63) <= value < 2**63:
         raise TokenError(f"{label} must fit in a signed 64-bit integer")
+
+
+def _validate_extension_keys(extensions: dict[Any, Any], reserved_keys: set[str]) -> None:
+    reserved = extensions.keys() & reserved_keys
+    if reserved:
+        names = ", ".join(sorted(repr(key) for key in reserved))
+        raise TokenError(f"extension fields use reserved connection-token keys: {names}")
 
 
 def _validate_fields(

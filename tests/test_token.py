@@ -122,35 +122,26 @@ def test_resolve_preserves_modern_security_fields(
         server_disco_public=b"d" * 32,
         preshared_key=b"p" * 32,
         region_id=1,
+        extensions={"z": {"future-security-field": b"keep-me"}, 7: True},
     )
     resolved = parse_token(resolve_token(original.to_token(), cache=DerpMapCache(tmp_path)))
     assert resolved.server_disco_public == b"d" * 32
     assert resolved.preshared_key == b"p" * 32
+    assert resolved.extensions == original.extensions
 
 
-def test_resolve_preserves_unknown_extension_fields(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    derp_map = {"Regions": {"1": {"RegionID": 1, "Nodes": [{"HostName": "derp.example.com"}]}}}
-
-    class Response(BytesIO):
-        def __init__(self, value):
-            super().__init__(value)
-            self.headers = {}
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            self.close()
-
-    monkeypatch.setattr(
-        "urllib.request.urlopen", lambda request, timeout: Response(json.dumps(derp_map).encode())
-    )
+def test_round_trip_preserves_unknown_nested_extension_fields() -> None:
     original = ConnInfo(
         server_public=b"n" * 32,
-        region_id=1,
+        regions=[
+            DerpRegion(
+                nodes=[DerpNode(hostname="derp.example.com", extensions={"u": b"node", "w": 0})],
+                extensions={"v": b"region", "y": False},
+            )
+        ],
         extensions={"z": {"future-security-field": b"keep-me"}, 7: True},
     )
-    resolved = parse_token(resolve_token(original.to_token(), cache=DerpMapCache(tmp_path)))
+    resolved = parse_token(original.to_token())
     assert resolved.extensions == original.extensions
+    assert resolved.regions[0].extensions == original.regions[0].extensions
+    assert resolved.regions[0].nodes[0].extensions == original.regions[0].nodes[0].extensions

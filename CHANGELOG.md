@@ -4,8 +4,8 @@
 
 - Match upstream token rejection for trailing CBOR data, signed 64-bit overflows, and malformed
   embedded DERP field types.
-- Preserve unknown top-level connection-token extensions across Python resolution for forward
-  compatibility.
+- Preserve unknown connection-token extensions across Python parsing and resolution for forward
+  compatibility, including fields nested in embedded DERP regions and nodes.
 - Add a scheduled check that reports when a newer stable Tailcat release is available.
 
 ## 0.2.0 - 2026-09-04
