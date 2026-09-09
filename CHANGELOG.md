@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.3 - 2026-09-08
 
 - Add typed synchronous and asyncio UDP connections that preserve datagram boundaries through
   Tailcat's SOCKS5 UDP relay.

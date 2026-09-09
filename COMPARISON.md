@@ -5,7 +5,7 @@ independent Python projects built around upstream
 [Tailscale Tailcat](https://github.com/tailscale/tailcat). They are not rename-compatible packages:
 install and import the one you intend.
 
-This comparison was checked on 2026-09-08 against `pytailcat` 0.1.4 and Tailkitty 0.2.2.
+This comparison was checked on 2026-09-08 against `pytailcat` 0.1.4 and Tailkitty 0.2.3.
 
 ## Summary
 
@@ -16,7 +16,7 @@ This comparison was checked on 2026-09-08 against `pytailcat` 0.1.4 and Tailkitt
 
 ## Feature comparison
 
-| Capability | `pytailcat` 0.1.4 | Tailkitty 0.2.2 |
+| Capability | `pytailcat` 0.1.4 | Tailkitty 0.2.3 |
 | --- | --- | --- |
 | Distribution/import | `pytailcat` | `tailkitty` |
 | Upstream data plane | Bundled Tailcat executable | Pinned Tailcat v0.6.0 executable |
